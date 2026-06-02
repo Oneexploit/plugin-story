@@ -1,0 +1,205 @@
+.prime-stories-admin-wrap {
+	max-width: 1180px;
+}
+
+.prime-stories-admin-hero {
+	display: flex;
+	align-items: center;
+	gap: 18px;
+	margin: 18px 0 22px;
+	padding: 22px;
+	border: 1px solid #d9dfe8;
+	border-radius: 22px;
+	background: linear-gradient(135deg, #ffffff, #f8fafc 52%, #fff4ee);
+	box-shadow: 0 14px 30px rgba(15, 23, 42, 0.05);
+}
+
+.prime-stories-admin-hero-mark {
+	flex: 0 0 76px;
+	width: 76px;
+	height: 76px;
+}
+
+.prime-stories-admin-hero-mark img {
+	display: block;
+	width: 100%;
+	height: 100%;
+}
+
+.prime-stories-admin-hero-copy h1 {
+	margin: 0 0 8px;
+	font-size: 1.8rem;
+	line-height: 1.15;
+}
+
+.prime-stories-admin-hero-copy p {
+	max-width: 760px;
+	margin: 0;
+	font-size: 0.98rem;
+	line-height: 1.7;
+	color: #334155;
+}
+
+.prime-stories-admin-hero-meta {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 10px 18px;
+	margin-top: 12px;
+	font-size: 0.9rem;
+	font-weight: 600;
+	color: #475569;
+}
+
+.prime-stories-admin-hero-meta a {
+	color: #ea580c;
+	text-decoration: none;
+}
+
+.prime-stories-admin-hero-meta a:hover,
+.prime-stories-admin-hero-meta a:focus-visible {
+	text-decoration: underline;
+}
+
+.prime-stories-admin-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+	gap: 18px;
+}
+
+.prime-stories-admin-card {
+	padding: 18px;
+	border: 1px solid #d9dfe8;
+	border-radius: 14px;
+	background: #ffffff;
+	box-shadow: 0 8px 20px rgba(15, 23, 42, 0.04);
+}
+
+.prime-stories-admin-card h3 {
+	margin-top: 0;
+	margin-bottom: 16px;
+}
+
+.prime-stories-admin-field {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	margin: 0 0 14px;
+}
+
+.prime-stories-admin-field label {
+	font-weight: 600;
+}
+
+.prime-stories-media-controls {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	margin-bottom: 10px;
+}
+
+.prime-stories-media-preview {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	min-height: 90px;
+	padding: 8px;
+	border: 1px dashed #cbd5e1;
+	border-radius: 12px;
+	background: #f8fafc;
+}
+
+.prime-stories-media-preview img {
+	display: block;
+	max-width: 100%;
+	max-height: 180px;
+	border-radius: 10px;
+}
+
+.prime-stories-rules-table td,
+.prime-stories-rules-table th {
+	vertical-align: top;
+}
+
+.prime-stories-rules-table input,
+.prime-stories-rules-table select {
+	width: 100%;
+}
+
+.prime-stories-stats-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+	gap: 16px;
+	margin: 18px 0 28px;
+}
+
+.prime-stories-stat-card {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	padding: 18px;
+	border: 1px solid #d9dfe8;
+	border-radius: 16px;
+	background: linear-gradient(180deg, #ffffff, #f8fafc);
+}
+
+.prime-stories-stat-card strong {
+	font-size: 1.7rem;
+	line-height: 1;
+}
+
+.prime-stories-log-meta-card {
+	margin-bottom: 22px;
+}
+
+.prime-stories-logs-table code {
+	font-size: 12px;
+}
+
+.prime-stories-logs-table pre {
+	max-width: 440px;
+	max-height: 220px;
+	margin: 10px 0 0;
+	padding: 12px;
+	overflow: auto;
+	border-radius: 12px;
+	background: #0f172a;
+	color: #e2e8f0;
+}
+
+.prime-stories-log-level {
+	display: inline-flex;
+	align-items: center;
+	padding: 4px 10px;
+	border-radius: 999px;
+	font-size: 11px;
+	font-weight: 700;
+	letter-spacing: 0.04em;
+}
+
+.prime-stories-log-level-debug {
+	background: #e0f2fe;
+	color: #075985;
+}
+
+.prime-stories-log-level-info {
+	background: #dcfce7;
+	color: #166534;
+}
+
+.prime-stories-log-level-warning {
+	background: #fef3c7;
+	color: #92400e;
+}
+
+.prime-stories-log-level-error,
+.prime-stories-log-level-critical {
+	background: #fee2e2;
+	color: #b91c1c;
+}
+
+@media (max-width: 782px) {
+	.prime-stories-admin-hero {
+		flex-direction: column;
+		align-items: flex-start;
+	}
+}

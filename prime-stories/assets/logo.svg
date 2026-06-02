@@ -1,0 +1,35 @@
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="primeStoriesBg" x1="36" y1="24" x2="220" y2="236" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0F172A"/>
+      <stop offset="1" stop-color="#1E293B"/>
+    </linearGradient>
+    <linearGradient id="primeStoriesRing" x1="59" y1="43" x2="198" y2="211" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FF8A3D"/>
+      <stop offset="0.55" stop-color="#FF5A36"/>
+      <stop offset="1" stop-color="#FF2D55"/>
+    </linearGradient>
+    <radialGradient id="primeStoriesGlow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(176 80) rotate(139.97) scale(141.772)">
+      <stop stop-color="#FFB17A" stop-opacity="0.32"/>
+      <stop offset="1" stop-color="#FFB17A" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="primeStoriesShadow" x="24" y="18" width="208" height="220" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feFlood flood-opacity="0" result="BackgroundImageFix"/>
+      <feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
+      <feOffset dy="12"/>
+      <feGaussianBlur stdDeviation="14"/>
+      <feColorMatrix type="matrix" values="0 0 0 0 0.0235294 0 0 0 0 0.0392157 0 0 0 0 0.0901961 0 0 0 0.32 0"/>
+      <feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow_1_1"/>
+      <feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow_1_1" result="shape"/>
+    </filter>
+  </defs>
+  <rect x="20" y="20" width="216" height="216" rx="56" fill="url(#primeStoriesBg)"/>
+  <rect x="20" y="20" width="216" height="216" rx="56" fill="url(#primeStoriesGlow)"/>
+  <g filter="url(#primeStoriesShadow)">
+    <path d="M128 58C89.3401 58 58 89.3401 58 128C58 166.66 89.3401 198 128 198C166.66 198 198 166.66 198 128" stroke="url(#primeStoriesRing)" stroke-width="18" stroke-linecap="round"/>
+    <path d="M182.5 72.5C187.194 72.5 191 68.6944 191 64C191 59.3056 187.194 55.5 182.5 55.5C177.806 55.5 174 59.3056 174 64C174 68.6944 177.806 72.5 182.5 72.5Z" fill="#FFD7C2"/>
+    <path d="M76 111.5C89.5309 111.5 100.5 100.531 100.5 87C100.5 73.469 89.5309 62.5 76 62.5C62.469 62.5 51.5 73.469 51.5 87C51.5 100.531 62.469 111.5 76 111.5Z" stroke="url(#primeStoriesRing)" stroke-width="11"/>
+    <path d="M182 204.5C193.874 204.5 203.5 194.874 203.5 183C203.5 171.126 193.874 161.5 182 161.5C170.126 161.5 160.5 171.126 160.5 183C160.5 194.874 170.126 204.5 182 204.5Z" stroke="url(#primeStoriesRing)" stroke-width="9"/>
+    <path d="M114.213 102.826C114.213 96.6654 121.007 92.9121 126.235 96.2215L159.347 117.182C164.193 120.248 164.193 127.328 159.347 130.394L126.235 151.355C121.007 154.664 114.213 150.911 114.213 144.75V102.826Z" fill="white"/>
+  </g>
+</svg>
