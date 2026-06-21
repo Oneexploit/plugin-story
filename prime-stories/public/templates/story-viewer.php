@@ -20,6 +20,7 @@ defined( 'ABSPATH' ) || exit;
 	<div class="prime-stories-track" role="list" aria-label="<?php esc_attr_e( 'Story list', 'prime-stories' ); ?>">
 		<?php foreach ( $stories as $index => $story ) : ?>
 			<?php $is_seen = in_array( (int) $story['id'], $seen_story_ids, true ); ?>
+			<?php $group = ! empty( $story['primary_group'] ) && is_array( $story['primary_group'] ) ? $story['primary_group'] : array(); ?>
 			<button
 				type="button"
 				class="prime-stories-item <?php echo $is_seen ? 'prime-stories-item-seen' : 'prime-stories-item-unseen'; ?>"
@@ -31,10 +32,13 @@ defined( 'ABSPATH' ) || exit;
 				aria-label="<?php echo esc_attr( sprintf( __( 'Open story %s', 'prime-stories' ), $story['title'] ) ); ?>"
 			>
 				<span class="prime-stories-item-media">
-					<img src="<?php echo esc_url( $story['preview_image'] ); ?>" alt="<?php echo esc_attr( $story['title'] ); ?>" loading="lazy" />
+					<img src="<?php echo esc_url( ! empty( $group['avatar'] ) ? $group['avatar'] : $story['preview_image'] ); ?>" alt="<?php echo esc_attr( ! empty( $group['title'] ) ? $group['title'] : $story['title'] ); ?>" loading="lazy" />
+					<?php if ( ! empty( $group['count'] ) && (int) $group['count'] > 1 ) : ?>
+						<small class="prime-stories-item-count"><?php echo esc_html( number_format_i18n( (int) $group['count'] ) ); ?></small>
+					<?php endif; ?>
 				</span>
 				<?php if ( $args['show_title'] ) : ?>
-					<span class="prime-stories-item-title"><?php echo esc_html( $story['title'] ); ?></span>
+					<span class="prime-stories-item-title"><?php echo esc_html( ! empty( $group['title'] ) ? $group['title'] : $story['title'] ); ?></span>
 				<?php endif; ?>
 			</button>
 		<?php endforeach; ?>
@@ -73,6 +77,8 @@ defined( 'ABSPATH' ) || exit;
 						data-button-target="<?php echo esc_attr( $story['button_target'] ); ?>"
 						data-open-on-click="<?php echo $story['open_on_click'] ? 'true' : 'false'; ?>"
 						data-fit-mode="<?php echo esc_attr( 'global' === $story['fit_mode'] ? $args['fit_mode'] : $story['fit_mode'] ); ?>"
+						data-focal-x="<?php echo esc_attr( (string) ( $story['focal_x'] ?? 50 ) ); ?>"
+						data-focal-y="<?php echo esc_attr( (string) ( $story['focal_y'] ?? 50 ) ); ?>"
 						data-story-group-start="<?php echo esc_attr( (string) ( $story['parent_start_index'] ?? 0 ) ); ?>"
 						data-story-group-count="<?php echo esc_attr( (string) ( $story['parent_slide_count'] ?? 1 ) ); ?>"
 						data-error-label="<?php esc_attr_e( 'Media could not be loaded.', 'prime-stories' ); ?>"
@@ -92,6 +98,7 @@ defined( 'ABSPATH' ) || exit;
 									poster="<?php echo esc_url( $story['preview_image'] ); ?>"
 									data-desktop-src="<?php echo esc_url( $story['video_url'] ); ?>"
 									data-mobile-src="<?php echo esc_url( $story['mobile_media_url'] ); ?>"
+									style="object-position: <?php echo esc_attr( (string) ( $story['focal_x'] ?? 50 ) ); ?>% <?php echo esc_attr( (string) ( $story['focal_y'] ?? 50 ) ); ?>%;"
 								></video>
 							<?php else : ?>
 								<img
@@ -99,6 +106,7 @@ defined( 'ABSPATH' ) || exit;
 									alt="<?php echo esc_attr( $story['title'] ); ?>"
 									data-desktop-src="<?php echo esc_url( $story['image_url'] ? $story['image_url'] : $story['preview_image'] ); ?>"
 									data-mobile-src="<?php echo esc_url( $story['mobile_media_url'] ); ?>"
+									style="object-position: <?php echo esc_attr( (string) ( $story['focal_x'] ?? 50 ) ); ?>% <?php echo esc_attr( (string) ( $story['focal_y'] ?? 50 ) ); ?>%;"
 								/>
 							<?php endif; ?>
 						</div>
@@ -131,7 +139,14 @@ defined( 'ABSPATH' ) || exit;
 							<?php endif; ?>
 
 							<?php if ( ! empty( $story['action_type'] ) && 'none' !== $story['action_type'] ) : ?>
-								<div class="prime-stories-action prime-stories-action-<?php echo esc_attr( $story['action_type'] ); ?>" data-story-action="<?php echo esc_attr( $story['action_type'] ); ?>">
+								<div
+									class="prime-stories-action prime-stories-action-<?php echo esc_attr( $story['action_type'] ); ?>"
+									data-story-action="<?php echo esc_attr( $story['action_type'] ); ?>"
+									data-poll-show-results="<?php echo ! empty( $story['poll_show_results'] ) ? 'true' : 'false'; ?>"
+									data-poll-vote-once="<?php echo ! empty( $story['poll_vote_once'] ) ? 'true' : 'false'; ?>"
+									data-success-message="<?php echo esc_attr( ! empty( $story['question_success_message'] ) ? $story['question_success_message'] : __( 'Sent', 'prime-stories' ) ); ?>"
+									data-allow-multiple-replies="<?php echo ! empty( $story['allow_multiple_replies'] ) ? 'true' : 'false'; ?>"
+								>
 									<?php if ( 'reaction' === $story['action_type'] ) : ?>
 										<button type="button" data-story-reaction="like"><?php esc_html_e( 'Like', 'prime-stories' ); ?></button>
 										<button type="button" data-story-reaction="love"><?php esc_html_e( 'Love', 'prime-stories' ); ?></button>
@@ -143,8 +158,13 @@ defined( 'ABSPATH' ) || exit;
 										<p><?php echo esc_html( $story['action_payload'] ? $story['action_payload'] : __( 'What do you think?', 'prime-stories' ) ); ?></p>
 										<div class="prime-stories-poll-options">
 											<?php foreach ( $poll_options as $poll_index => $poll_option ) : ?>
-												<button type="button" data-story-reaction="<?php echo esc_attr( 'poll_' . sanitize_key( $poll_option ) ); ?>" data-poll-option>
-													<span><?php echo esc_html( $poll_option ); ?></span>
+												<?php
+												$poll_parts = array_map( 'trim', explode( '|', $poll_option ) );
+												$poll_label = $poll_parts[0] ?? '';
+												$poll_color = ! empty( $poll_parts[1] ) ? sanitize_hex_color( $poll_parts[1] ) : '';
+												?>
+												<button type="button" data-story-reaction="<?php echo esc_attr( 'poll_' . sanitize_key( $poll_label ) ); ?>" data-poll-option style="<?php echo $poll_color ? '--poll-color:' . esc_attr( $poll_color ) . ';' : ''; ?>">
+													<span><?php echo esc_html( $poll_label ); ?></span>
 													<small data-poll-result hidden></small>
 												</button>
 											<?php endforeach; ?>
@@ -154,6 +174,10 @@ defined( 'ABSPATH' ) || exit;
 											<span><?php echo esc_html( $story['action_payload'] ? $story['action_payload'] : __( 'Send a reply', 'prime-stories' ) ); ?></span>
 											<input type="text" data-story-reply maxlength="160" placeholder="<?php echo esc_attr( $story['reply_placeholder'] ? $story['reply_placeholder'] : __( 'Write a reply...', 'prime-stories' ) ); ?>">
 										</label>
+										<?php if ( ! empty( $story['question_helper_text'] ) ) : ?>
+											<small class="prime-stories-action-help"><?php echo esc_html( $story['question_helper_text'] ); ?></small>
+										<?php endif; ?>
+										<small class="prime-stories-reply-status" data-story-reply-status aria-live="polite"></small>
 										<button type="button" data-story-reply-submit><?php esc_html_e( 'Send', 'prime-stories' ); ?></button>
 									<?php elseif ( 'countdown' === $story['action_type'] ) : ?>
 										<p><?php echo esc_html( $story['action_payload'] ? $story['action_payload'] : __( 'Countdown', 'prime-stories' ) ); ?></p>

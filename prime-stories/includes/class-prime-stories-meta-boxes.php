@@ -67,25 +67,28 @@ class Prime_Stories_Meta_Boxes {
 
 		wp_nonce_field( 'prime_stories_save_story', 'prime_stories_story_nonce' );
 		?>
-		<div class="prime-stories-admin-panel">
-			<?php $this->render_slides_editor( $meta['slides'] ); ?>
-			<?php $this->render_legacy_hidden_fields( $meta ); ?>
-			<div class="prime-stories-admin-grid">
-				<div class="prime-stories-admin-card">
-					<h3><?php esc_html_e( 'Publishing', 'prime-stories' ); ?></h3>
-					<?php $this->render_number_field( 'priority', __( 'Priority / order', 'prime-stories' ), (int) $meta['priority'] ); ?>
-					<?php $this->render_select_field( 'story_status', __( 'Story status', 'prime-stories' ), $meta['story_status'], array( 'active' => __( 'Active', 'prime-stories' ), 'inactive' => __( 'Inactive', 'prime-stories' ), 'scheduled' => __( 'Scheduled', 'prime-stories' ), 'expired' => __( 'Expired', 'prime-stories' ) ) ); ?>
-					<?php $this->render_datetime_field( 'start_datetime', __( 'Start datetime', 'prime-stories' ), $meta['start_datetime'] ); ?>
-					<?php $this->render_datetime_field( 'end_datetime', __( 'End datetime', 'prime-stories' ), $meta['end_datetime'] ); ?>
-				</div>
+		<div class="prime-stories-admin-workspace">
+			<div class="prime-stories-admin-panel">
+				<?php $this->render_slides_editor( $meta['slides'] ); ?>
+				<?php $this->render_legacy_hidden_fields( $meta ); ?>
+				<div class="prime-stories-admin-grid">
+					<div class="prime-stories-admin-card">
+						<h3><?php esc_html_e( 'Publishing', 'prime-stories' ); ?></h3>
+						<?php $this->render_number_field( 'priority', __( 'Priority / order', 'prime-stories' ), (int) $meta['priority'] ); ?>
+						<?php $this->render_select_field( 'story_status', __( 'Story status', 'prime-stories' ), $meta['story_status'], array( 'active' => __( 'Active', 'prime-stories' ), 'inactive' => __( 'Inactive', 'prime-stories' ), 'scheduled' => __( 'Scheduled', 'prime-stories' ), 'expired' => __( 'Expired', 'prime-stories' ) ) ); ?>
+						<?php $this->render_datetime_field( 'start_datetime', __( 'Start datetime', 'prime-stories' ), $meta['start_datetime'] ); ?>
+						<?php $this->render_datetime_field( 'end_datetime', __( 'End datetime', 'prime-stories' ), $meta['end_datetime'] ); ?>
+					</div>
 
-				<div class="prime-stories-admin-card">
-					<h3><?php esc_html_e( 'Targeting', 'prime-stories' ); ?></h3>
-					<?php $this->render_select_field( 'show_devices', __( 'Show on devices', 'prime-stories' ), $meta['show_devices'], array( 'all' => __( 'All devices', 'prime-stories' ), 'desktop_only' => __( 'Desktop only', 'prime-stories' ), 'mobile_only' => __( 'Mobile only', 'prime-stories' ) ) ); ?>
-					<?php $this->render_select_field( 'show_users', __( 'Show to users', 'prime-stories' ), $meta['show_users'], array( 'everyone' => __( 'Everyone', 'prime-stories' ), 'guests_only' => __( 'Guests only', 'prime-stories' ), 'logged_in_only' => __( 'Logged-in users only', 'prime-stories' ) ) ); ?>
-					<?php $this->render_text_field( 'custom_css_class', __( 'Custom CSS class', 'prime-stories' ), $meta['custom_css_class'] ); ?>
+					<div class="prime-stories-admin-card">
+						<h3><?php esc_html_e( 'Targeting', 'prime-stories' ); ?></h3>
+						<?php $this->render_select_field( 'show_devices', __( 'Show on devices', 'prime-stories' ), $meta['show_devices'], array( 'all' => __( 'All devices', 'prime-stories' ), 'desktop_only' => __( 'Desktop only', 'prime-stories' ), 'mobile_only' => __( 'Mobile only', 'prime-stories' ) ) ); ?>
+						<?php $this->render_select_field( 'show_users', __( 'Show to users', 'prime-stories' ), $meta['show_users'], array( 'everyone' => __( 'Everyone', 'prime-stories' ), 'guests_only' => __( 'Guests only', 'prime-stories' ), 'logged_in_only' => __( 'Logged-in users only', 'prime-stories' ) ) ); ?>
+						<?php $this->render_text_field( 'custom_css_class', __( 'Custom CSS class', 'prime-stories' ), $meta['custom_css_class'] ); ?>
+					</div>
 				</div>
 			</div>
+			<?php $this->render_phone_preview(); ?>
 		</div>
 		<?php
 	}
@@ -217,6 +220,8 @@ class Prime_Stories_Meta_Boxes {
 				'video_id'        => $this->sanitize_attachment_id( $raw_slide['video_id'] ?? 0, 'video', 'slides.video_id', $post_id ),
 				'mobile_media_id' => $this->sanitize_attachment_id( $raw_slide['mobile_media_id'] ?? 0, 'media', 'slides.mobile_media_id', $post_id ),
 				'cover_image_id'  => $this->sanitize_attachment_id( $raw_slide['cover_image_id'] ?? 0, 'image', 'slides.cover_image_id', $post_id ),
+				'focal_x'         => max( 0, min( 100, absint( $raw_slide['focal_x'] ?? 50 ) ) ),
+				'focal_y'         => max( 0, min( 100, absint( $raw_slide['focal_y'] ?? 50 ) ) ),
 				'title'           => sanitize_text_field( wp_unslash( (string) ( $raw_slide['title'] ?? '' ) ) ),
 				'subtitle'        => sanitize_text_field( wp_unslash( (string) ( $raw_slide['subtitle'] ?? '' ) ) ),
 				'caption'         => wp_kses_post( wp_unslash( (string) ( $raw_slide['caption'] ?? '' ) ) ),
@@ -228,8 +233,13 @@ class Prime_Stories_Meta_Boxes {
 				'fit_mode'        => prime_stories_sanitize_select( (string) ( $raw_slide['fit_mode'] ?? '' ), array( 'global', 'cover', 'contain' ), 'global' ),
 				'action_type'     => prime_stories_sanitize_select( (string) ( $raw_slide['action_type'] ?? '' ), array( 'none', 'reaction', 'poll', 'question', 'countdown' ), 'none' ),
 				'action_payload'  => sanitize_textarea_field( wp_unslash( (string) ( $raw_slide['action_payload'] ?? '' ) ) ),
-				'poll_options'    => sanitize_textarea_field( wp_unslash( (string) ( $raw_slide['poll_options'] ?? '' ) ) ),
+				'poll_options'    => $this->sanitize_poll_options( $raw_slide['poll_options'] ?? '' ),
+				'poll_show_results' => prime_stories_sanitize_select( (string) ( $raw_slide['poll_show_results'] ?? '' ), array( 'yes', 'no' ), 'yes' ),
+				'poll_vote_once'  => prime_stories_sanitize_select( (string) ( $raw_slide['poll_vote_once'] ?? '' ), array( 'yes', 'no' ), 'yes' ),
 				'reply_placeholder' => sanitize_text_field( wp_unslash( (string) ( $raw_slide['reply_placeholder'] ?? '' ) ) ),
+				'question_success_message' => sanitize_text_field( wp_unslash( (string) ( $raw_slide['question_success_message'] ?? '' ) ) ),
+				'question_helper_text' => sanitize_textarea_field( wp_unslash( (string) ( $raw_slide['question_helper_text'] ?? '' ) ) ),
+				'allow_multiple_replies' => prime_stories_sanitize_select( (string) ( $raw_slide['allow_multiple_replies'] ?? '' ), array( 'yes', 'no' ), 'no' ),
 				'countdown_datetime' => $this->sanitize_datetime_value( $raw_slide['countdown_datetime'] ?? '', 'slides.countdown_datetime', $post_id ),
 			);
 
@@ -239,6 +249,35 @@ class Prime_Stories_Meta_Boxes {
 		}
 
 		return prime_stories_normalize_slides( $slides, $post_id, array() );
+	}
+
+	/**
+	 * Sanitize poll option lines and keep a reasonable maximum.
+	 *
+	 * @param mixed $raw_options Raw options.
+	 * @return string
+	 */
+	private function sanitize_poll_options( $raw_options ) {
+		$lines = preg_split( '/\r\n|\r|\n/', wp_unslash( (string) $raw_options ) );
+		$clean = array();
+
+		foreach ( is_array( $lines ) ? $lines : array() as $line ) {
+			$parts = array_map( 'trim', explode( '|', (string) $line ) );
+			$label = sanitize_text_field( $parts[0] ?? '' );
+			$color = ! empty( $parts[1] ) ? sanitize_hex_color( $parts[1] ) : '';
+
+			if ( ! $label ) {
+				continue;
+			}
+
+			$clean[] = $color ? $label . ' | ' . $color : $label;
+
+			if ( count( $clean ) >= 5 ) {
+				break;
+			}
+		}
+
+		return implode( "\n", $clean );
 	}
 
 	/**
@@ -555,6 +594,8 @@ class Prime_Stories_Meta_Boxes {
 						<?php $this->render_slide_media_field( $prefix, 'video_id', __( 'Video', 'prime-stories' ), $slide['video_id'], 'video', 'media' ); ?>
 						<?php $this->render_slide_media_field( $prefix, 'mobile_media_id', __( 'Mobile override', 'prime-stories' ), $slide['mobile_media_id'], 'media', 'media' ); ?>
 						<?php $this->render_slide_media_field( $prefix, 'cover_image_id', __( 'Cover', 'prime-stories' ), $slide['cover_image_id'], 'image', 'media' ); ?>
+						<?php $this->render_slide_input( $prefix, 'focal_x', __( 'Focal X', 'prime-stories' ), (string) $slide['focal_x'], 'number', 'media' ); ?>
+						<?php $this->render_slide_input( $prefix, 'focal_y', __( 'Focal Y', 'prime-stories' ), (string) $slide['focal_y'], 'number', 'media' ); ?>
 						<?php $this->render_slide_input( $prefix, 'title', __( 'Slide title', 'prime-stories' ), $slide['title'], 'text', 'text' ); ?>
 						<?php $this->render_slide_input( $prefix, 'subtitle', __( 'Subtitle', 'prime-stories' ), $slide['subtitle'], 'text', 'text' ); ?>
 						<?php $this->render_slide_input( $prefix, 'button_text', __( 'Button text', 'prime-stories' ), $slide['button_text'], 'text', 'cta' ); ?>
@@ -575,13 +616,51 @@ class Prime_Stories_Meta_Boxes {
 					</label>
 					<label class="prime-stories-admin-field" data-slide-panel="action" data-slide-poll-options-field>
 						<span><?php esc_html_e( 'Poll options', 'prime-stories' ); ?></span>
-						<textarea rows="3" name="<?php echo esc_attr( $prefix . '[poll_options]' ); ?>" placeholder="<?php esc_attr_e( 'One option per line', 'prime-stories' ); ?>"><?php echo esc_textarea( (string) $slide['poll_options'] ); ?></textarea>
+						<textarea rows="3" name="<?php echo esc_attr( $prefix . '[poll_options]' ); ?>" placeholder="<?php esc_attr_e( 'One option per line. Add an optional color with: Label | #ff6b35', 'prime-stories' ); ?>"><?php echo esc_textarea( (string) $slide['poll_options'] ); ?></textarea>
 					</label>
+					<?php $this->render_slide_select( $prefix, 'poll_show_results', __( 'Show poll results after vote', 'prime-stories' ), $slide['poll_show_results'], array( 'yes' => __( 'Yes', 'prime-stories' ), 'no' => __( 'No', 'prime-stories' ) ), 'action' ); ?>
+					<?php $this->render_slide_select( $prefix, 'poll_vote_once', __( 'One vote per visitor', 'prime-stories' ), $slide['poll_vote_once'], array( 'yes' => __( 'Yes', 'prime-stories' ), 'no' => __( 'No', 'prime-stories' ) ), 'action' ); ?>
 					<?php $this->render_slide_input( $prefix, 'reply_placeholder', __( 'Reply placeholder', 'prime-stories' ), $slide['reply_placeholder'], 'text', 'action' ); ?>
+					<?php $this->render_slide_input( $prefix, 'question_success_message', __( 'Success message', 'prime-stories' ), $slide['question_success_message'], 'text', 'action' ); ?>
+					<label class="prime-stories-admin-field" data-slide-panel="action" data-slide-question-helper-field>
+						<span><?php esc_html_e( 'Question privacy/helper text', 'prime-stories' ); ?></span>
+						<textarea rows="2" name="<?php echo esc_attr( $prefix . '[question_helper_text]' ); ?>"><?php echo esc_textarea( (string) $slide['question_helper_text'] ); ?></textarea>
+					</label>
+					<?php $this->render_slide_select( $prefix, 'allow_multiple_replies', __( 'Allow multiple replies', 'prime-stories' ), $slide['allow_multiple_replies'], array( 'no' => __( 'No', 'prime-stories' ), 'yes' => __( 'Yes', 'prime-stories' ) ), 'action' ); ?>
 					<?php $this->render_slide_input( $prefix, 'countdown_datetime', __( 'Countdown date and time', 'prime-stories' ), $this->format_datetime_input( $slide['countdown_datetime'] ), 'datetime-local', 'action' ); ?>
+					<p class="prime-stories-admin-field-description" data-slide-panel="action"><?php echo esc_html( sprintf( __( 'Timezone: %s', 'prime-stories' ), wp_timezone_string() ) ); ?></p>
 				</div>
 			</div>
 		</div>
+		<?php
+	}
+
+	private function render_phone_preview() {
+		?>
+		<aside class="prime-stories-live-preview" data-story-live-preview aria-label="<?php esc_attr_e( 'Live story preview', 'prime-stories' ); ?>">
+			<div class="prime-stories-live-preview-phone" dir="<?php echo is_rtl() ? 'rtl' : 'ltr'; ?>">
+				<div class="prime-stories-live-progress" data-preview-progress></div>
+				<div class="prime-stories-live-header">
+					<span class="prime-stories-live-avatar"></span>
+					<strong data-preview-story-title><?php esc_html_e( 'Story preview', 'prime-stories' ); ?></strong>
+				</div>
+				<div class="prime-stories-live-media" data-preview-media>
+					<span><?php esc_html_e( 'Select a slide to preview it.', 'prime-stories' ); ?></span>
+				</div>
+				<div class="prime-stories-live-overlay"></div>
+				<div class="prime-stories-live-content">
+					<h4 data-preview-title></h4>
+					<p data-preview-subtitle></p>
+					<div data-preview-caption></div>
+					<a href="#" class="prime-stories-live-cta" data-preview-cta hidden></a>
+					<div class="prime-stories-live-action" data-preview-action hidden></div>
+				</div>
+				<div class="prime-stories-live-controls">
+					<button type="button" class="button" data-preview-prev><?php esc_html_e( 'Previous', 'prime-stories' ); ?></button>
+					<button type="button" class="button" data-preview-next><?php esc_html_e( 'Next', 'prime-stories' ); ?></button>
+				</div>
+			</div>
+		</aside>
 		<?php
 	}
 

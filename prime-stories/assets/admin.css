@@ -66,6 +66,13 @@
 	gap: 18px;
 }
 
+.prime-stories-admin-workspace {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) 340px;
+	gap: 22px;
+	align-items: start;
+}
+
 .prime-stories-admin-card {
 	padding: 18px;
 	border: 1px solid #d9dfe8;
@@ -187,6 +194,7 @@
 }
 
 .prime-stories-slide-preview-media {
+	position: relative;
 	display: grid;
 	place-items: center;
 	aspect-ratio: 9 / 16;
@@ -195,6 +203,29 @@
 	background: #0f172a;
 	color: #ffffff;
 	font-weight: 700;
+}
+
+.prime-stories-slide-preview-media[data-focal-picker] {
+	cursor: crosshair;
+}
+
+.prime-stories-focal-marker {
+	position: absolute;
+	z-index: 2;
+	width: 18px;
+	height: 18px;
+	border: 2px solid #ffffff;
+	border-radius: 999px;
+	box-shadow: 0 0 0 2px #2563eb, 0 2px 8px rgba(15, 23, 42, 0.3);
+	transform: translate(-50%, -50%);
+	pointer-events: none;
+}
+
+.prime-stories-focal-reset {
+	position: absolute;
+	right: 8px;
+	bottom: 8px;
+	z-index: 3;
 }
 
 .prime-stories-slide-preview-media img {
@@ -221,6 +252,175 @@
 	background: #fffbeb;
 	color: #92400e;
 	font-weight: 600;
+}
+
+.prime-stories-live-preview {
+	position: sticky;
+	top: 42px;
+}
+
+.prime-stories-live-preview-phone {
+	position: relative;
+	width: min(100%, 320px);
+	aspect-ratio: 9 / 16;
+	margin-inline: auto;
+	overflow: hidden;
+	border: 10px solid #111827;
+	border-radius: 34px;
+	background: #020617;
+	color: #ffffff;
+	box-shadow: 0 18px 48px rgba(15, 23, 42, 0.24);
+}
+
+.prime-stories-live-progress {
+	position: absolute;
+	top: 14px;
+	left: 14px;
+	right: 14px;
+	z-index: 5;
+	display: flex;
+	gap: 4px;
+}
+
+.prime-stories-live-progress span {
+	flex: 1;
+	height: 3px;
+	overflow: hidden;
+	border-radius: 999px;
+	background: rgba(255, 255, 255, 0.24);
+}
+
+.prime-stories-live-progress b {
+	display: block;
+	width: 0;
+	height: 100%;
+	background: #ffffff;
+}
+
+.prime-stories-live-progress .is-complete b,
+.prime-stories-live-progress .is-active b {
+	width: 100%;
+}
+
+.prime-stories-live-header {
+	position: absolute;
+	top: 28px;
+	left: 16px;
+	right: 16px;
+	z-index: 5;
+	display: flex;
+	align-items: center;
+	gap: 9px;
+	min-width: 0;
+}
+
+.prime-stories-live-avatar {
+	width: 30px;
+	height: 30px;
+	border: 2px solid rgba(255, 255, 255, 0.76);
+	border-radius: 999px;
+	background: linear-gradient(135deg, #ff6b35, #2563eb);
+}
+
+.prime-stories-live-header strong {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.prime-stories-live-media,
+.prime-stories-live-media img,
+.prime-stories-live-overlay {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+}
+
+.prime-stories-live-media {
+	display: grid;
+	place-items: center;
+	color: rgba(255, 255, 255, 0.78);
+	text-align: center;
+}
+
+.prime-stories-live-media img {
+	object-fit: cover;
+}
+
+.prime-stories-live-overlay {
+	background: linear-gradient(180deg, rgba(2, 6, 23, 0.04), rgba(2, 6, 23, 0.36) 62%, rgba(2, 6, 23, 0.82));
+}
+
+.prime-stories-live-content {
+	position: absolute;
+	left: 16px;
+	right: 16px;
+	bottom: 72px;
+	z-index: 5;
+	display: grid;
+	gap: 8px;
+}
+
+.prime-stories-live-content h4,
+.prime-stories-live-content p,
+.prime-stories-live-content div {
+	margin: 0;
+}
+
+.prime-stories-live-content h4 {
+	font-size: 20px;
+	line-height: 1.15;
+}
+
+.prime-stories-live-cta,
+.prime-stories-live-action button {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-height: 42px;
+	padding: 0 14px;
+	border: 0;
+	border-radius: 999px;
+	background: #ffffff;
+	color: #020617;
+	font-weight: 800;
+	text-decoration: none;
+}
+
+.prime-stories-live-action {
+	display: grid;
+	gap: 6px;
+	padding: 10px;
+	border-radius: 14px;
+	background: rgba(255, 255, 255, 0.16);
+	backdrop-filter: blur(12px);
+}
+
+.prime-stories-live-action button {
+	width: 100%;
+	justify-content: space-between;
+	background: var(--poll-color, #ffffff);
+}
+
+.prime-stories-live-action input {
+	width: 100%;
+	box-sizing: border-box;
+	min-height: 40px;
+	border: 0;
+	border-radius: 999px;
+	padding: 0 12px;
+}
+
+.prime-stories-live-controls {
+	position: absolute;
+	left: 12px;
+	right: 12px;
+	bottom: 14px;
+	z-index: 6;
+	display: flex;
+	justify-content: space-between;
+	gap: 8px;
 }
 
 .prime-stories-admin-field {
@@ -274,6 +474,59 @@
 	grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
 	gap: 16px;
 	margin: 18px 0 28px;
+}
+
+.prime-stories-group-column-avatar {
+	width: 42px;
+	height: 42px;
+	border-radius: 999px;
+	object-fit: cover;
+}
+
+.prime-stories-studio-search {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 10px;
+	align-items: center;
+	margin: 18px 0;
+}
+
+.prime-stories-studio-search input[type="search"] {
+	min-width: min(100%, 320px);
+}
+
+.prime-stories-studio-table small {
+	display: block;
+	margin-top: 4px;
+	color: #64748b;
+}
+
+.prime-stories-status-pill {
+	display: inline-flex;
+	align-items: center;
+	min-height: 24px;
+	padding: 0 9px;
+	border-radius: 999px;
+	background: #e2e8f0;
+	color: #334155;
+	font-size: 12px;
+	font-weight: 700;
+}
+
+.prime-stories-status-active {
+	background: #dcfce7;
+	color: #166534;
+}
+
+.prime-stories-status-scheduled {
+	background: #dbeafe;
+	color: #1d4ed8;
+}
+
+.prime-stories-status-expired,
+.prime-stories-status-inactive {
+	background: #fee2e2;
+	color: #991b1b;
 }
 
 .prime-stories-stat-card {
@@ -352,6 +605,14 @@
 	}
 
 	.prime-stories-slide-preview {
+		position: static;
+	}
+
+	.prime-stories-admin-workspace {
+		grid-template-columns: 1fr;
+	}
+
+	.prime-stories-live-preview {
 		position: static;
 	}
 }

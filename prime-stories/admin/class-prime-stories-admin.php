@@ -58,6 +58,15 @@ class Prime_Stories_Admin {
 	public function register_admin_pages() {
 		add_submenu_page(
 			'edit.php?post_type=prime_story',
+			__( 'Story Studio', 'prime-stories' ),
+			__( 'Story Studio', 'prime-stories' ),
+			'edit_posts',
+			'prime-stories-studio',
+			array( $this, 'render_story_studio_page' )
+		);
+
+		add_submenu_page(
+			'edit.php?post_type=prime_story',
 			__( 'Settings', 'prime-stories' ),
 			__( 'Settings', 'prime-stories' ),
 			'manage_options',
@@ -233,6 +242,51 @@ class Prime_Stories_Admin {
 		}
 
 		include PRIME_STORIES_DIR . 'admin/views/settings-page.php';
+	}
+
+	/**
+	 * Render Story Studio page.
+	 *
+	 * @return void
+	 */
+	public function render_story_studio_page() {
+		if ( ! current_user_can( 'edit_posts' ) ) {
+			return;
+		}
+
+		$search = isset( $_GET['s'] ) ? sanitize_text_field( wp_unslash( (string) $_GET['s'] ) ) : '';
+		$query  = new WP_Query(
+			array(
+				'post_type'              => 'prime_story',
+				'post_status'            => array( 'publish', 'draft', 'pending', 'future' ),
+				'posts_per_page'         => 50,
+				's'                      => $search,
+				'orderby'                => 'modified',
+				'order'                  => 'DESC',
+				'no_found_rows'          => true,
+				'update_post_meta_cache' => true,
+				'update_post_term_cache' => true,
+			)
+		);
+
+		$stories = array();
+		foreach ( $query->posts as $post ) {
+			$meta = prime_stories_get_story_meta( $post->ID );
+			$stories[] = array(
+				'id'             => (int) $post->ID,
+				'title'          => get_the_title( $post ),
+				'status'         => (string) ( $meta['story_status'] ?? 'active' ),
+				'post_status'    => get_post_status( $post ),
+				'slides'         => is_array( $meta['slides'] ) ? count( $meta['slides'] ) : 0,
+				'start_datetime' => (string) ( $meta['start_datetime'] ?? '' ),
+				'end_datetime'   => (string) ( $meta['end_datetime'] ?? '' ),
+				'modified'       => get_post_modified_time( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), false, $post ),
+				'groups'         => wp_get_post_terms( $post->ID, 'prime_story_group', array( 'fields' => 'names' ) ),
+				'edit_link'      => get_edit_post_link( $post->ID ),
+			);
+		}
+
+		include PRIME_STORIES_DIR . 'admin/views/studio-page.php';
 	}
 
 	/**

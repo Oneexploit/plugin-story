@@ -69,7 +69,10 @@
 					previewImage.src = previewUrl;
 					previewImage.alt = "";
 					previewMedia.appendChild(previewImage);
+					previewMedia.setAttribute("data-focal-picker", "");
+					ensureFocalMarker(row);
 				}
+				scheduleLivePreview();
 			}
 			return;
 		}
@@ -150,6 +153,36 @@
 			}
 		}
 
+		const focalPicker = event.target.closest("[data-focal-picker]");
+		if (focalPicker) {
+			const row = focalPicker.closest("[data-slide-row]");
+			const rect = focalPicker.getBoundingClientRect();
+			const x = Math.max(0, Math.min(100, Math.round(((event.clientX - rect.left) / rect.width) * 100)));
+			const y = Math.max(0, Math.min(100, Math.round(((event.clientY - rect.top) / rect.height) * 100)));
+			setField(row, "focal_x", String(x));
+			setField(row, "focal_y", String(y));
+			updateFocalMarker(row);
+			syncSlideRow(row);
+			return;
+		}
+
+		const resetFocal = event.target.closest("[data-focal-reset]");
+		if (resetFocal) {
+			event.preventDefault();
+			const row = resetFocal.closest("[data-slide-row]");
+			setField(row, "focal_x", "50");
+			setField(row, "focal_y", "50");
+			updateFocalMarker(row);
+			syncSlideRow(row);
+			return;
+		}
+
+		const clickedSlide = event.target.closest("[data-slide-row]");
+		if (clickedSlide) {
+			activePreviewIndex = Math.max(0, getSlideRows().indexOf(clickedSlide));
+			scheduleLivePreview();
+		}
+
 		const moveUpButton = event.target.closest(".prime-stories-move-slide-up");
 		if (moveUpButton) {
 			event.preventDefault();
@@ -191,7 +224,14 @@
 	const addSlideButton = document.getElementById("prime-stories-add-slide");
 	const slidesContainer = document.getElementById("prime-stories-slide-rows");
 	const slideTemplate = document.getElementById("tmpl-prime-stories-slide-row");
+	const livePreview = document.querySelector("[data-story-live-preview]");
 	let draggedSlide = null;
+	let activePreviewIndex = 0;
+	let previewTimer = null;
+
+	function getSlideRows() {
+		return slidesContainer ? Array.from(slidesContainer.querySelectorAll("[data-slide-row]")) : [];
+	}
 
 	function renumberSlides() {
 		if (!slidesContainer) {
@@ -319,6 +359,7 @@
 		const previewMeta = row.querySelector("[data-slide-preview-meta]");
 		const buttonText = row.querySelector('input[name$="[button_text]"]');
 		const buttonUrl = row.querySelector('input[name$="[button_url]"]');
+		updateFocalMarker(row);
 
 		if (imageInput) {
 			const imageField = imageInput.closest(".prime-stories-media-field");
@@ -368,6 +409,54 @@
 		}
 
 		validateSlideRow(row);
+		scheduleLivePreview();
+	}
+
+	function ensureFocalMarker(row) {
+		const media = row ? row.querySelector(".prime-stories-slide-preview-media") : null;
+		if (!media) {
+			return;
+		}
+
+		if (!media.querySelector(".prime-stories-focal-marker")) {
+			const marker = document.createElement("span");
+			marker.className = "prime-stories-focal-marker";
+			marker.setAttribute("aria-hidden", "true");
+			media.appendChild(marker);
+		}
+
+		if (!media.querySelector("[data-focal-reset]")) {
+			const reset = document.createElement("button");
+			reset.type = "button";
+			reset.className = "button button-small prime-stories-focal-reset";
+			reset.setAttribute("data-focal-reset", "");
+			reset.textContent = getLabel("resetFocal", "Reset focus");
+			media.appendChild(reset);
+		}
+	}
+
+	function updateFocalMarker(row) {
+		const media = row ? row.querySelector(".prime-stories-slide-preview-media") : null;
+		if (!media) {
+			return;
+		}
+
+		const image = media.querySelector("img");
+		if (!image) {
+			return;
+		}
+
+		media.setAttribute("data-focal-picker", "");
+		ensureFocalMarker(row);
+		const x = getRowValue(row, "focal_x") || "50";
+		const y = getRowValue(row, "focal_y") || "50";
+		image.style.objectPosition = x + "% " + y + "%";
+
+		const marker = media.querySelector(".prime-stories-focal-marker");
+		if (marker) {
+			marker.style.left = x + "%";
+			marker.style.top = y + "%";
+		}
 	}
 
 	function setActiveSlideTab(row, tabName) {
@@ -397,6 +486,11 @@
 		if (field) {
 			field.value = value;
 		}
+	}
+
+	function getRowValue(row, suffix) {
+		const field = row ? row.querySelector('[name$="[' + suffix + ']"]') : null;
+		return field ? field.value || "" : "";
 	}
 
 	function applyPreset(row, preset) {
@@ -446,11 +540,22 @@
 			const options = pollOptions && pollOptions.value ? pollOptions.value.split(/\r?\n/).filter((option) => option.trim()) : [];
 			if (options.length < 2) {
 				warnings.push(getLabel("missingPollOptions", "Add at least two poll options."));
+			} else if (options.length > 5) {
+				warnings.push(getLabel("tooManyPollOptions", "Use no more than five poll options."));
 			}
 		}
 
 		if (actionType && actionType.value === "countdown" && countdownInput && !countdownInput.value) {
 			warnings.push(getLabel("missingCountdown", "Countdown date is missing."));
+		}
+
+		const buttonText = row.querySelector('input[name$="[button_text]"]');
+		const buttonUrl = row.querySelector('input[name$="[button_url]"]');
+		if (buttonText && buttonText.value.trim() && buttonUrl && !buttonUrl.value.trim()) {
+			warnings.push(getLabel("missingCtaUrl", "CTA URL is missing."));
+		}
+		if (buttonUrl && buttonUrl.value.trim() && buttonText && !buttonText.value.trim()) {
+			warnings.push(getLabel("missingCtaLabel", "CTA label is missing."));
 		}
 
 		let warningBox = row.querySelector("[data-slide-warnings]");
@@ -483,4 +588,138 @@
 	});
 
 	syncSlideRows();
+
+	if (livePreview) {
+		const prev = livePreview.querySelector("[data-preview-prev]");
+		const next = livePreview.querySelector("[data-preview-next]");
+		if (prev) {
+			prev.addEventListener("click", function () {
+				activePreviewIndex = Math.max(0, activePreviewIndex - 1);
+				renderLivePreview();
+			});
+		}
+		if (next) {
+			next.addEventListener("click", function () {
+				activePreviewIndex = Math.min(getSlideRows().length - 1, activePreviewIndex + 1);
+				renderLivePreview();
+			});
+		}
+		renderLivePreview();
+	}
+
+	function scheduleLivePreview() {
+		if (!livePreview) {
+			return;
+		}
+
+		window.clearTimeout(previewTimer);
+		previewTimer = window.setTimeout(renderLivePreview, 80);
+	}
+
+	function renderLivePreview() {
+		if (!livePreview) {
+			return;
+		}
+
+		const rows = getSlideRows();
+		activePreviewIndex = Math.max(0, Math.min(activePreviewIndex, Math.max(0, rows.length - 1)));
+		const row = rows[activePreviewIndex] || null;
+		const progress = livePreview.querySelector("[data-preview-progress]");
+		const media = livePreview.querySelector("[data-preview-media]");
+		const title = livePreview.querySelector("[data-preview-title]");
+		const subtitle = livePreview.querySelector("[data-preview-subtitle]");
+		const caption = livePreview.querySelector("[data-preview-caption]");
+		const cta = livePreview.querySelector("[data-preview-cta]");
+		const action = livePreview.querySelector("[data-preview-action]");
+
+		if (progress) {
+			progress.innerHTML = rows
+				.map((unused, index) => '<span class="' + (index < activePreviewIndex ? "is-complete" : index === activePreviewIndex ? "is-active" : "") + '"><b></b></span>')
+				.join("");
+		}
+
+		if (!row) {
+			if (media) {
+				media.innerHTML = "<span>" + escapeHtml(getLabel("emptySlides", "No slides yet.")) + "</span>";
+			}
+			return;
+		}
+
+		const previewImg = row.querySelector(".prime-stories-slide-preview-media img");
+		const fitMode = getRowValue(row, "fit_mode") === "contain" ? "contain" : "cover";
+		const focalX = getRowValue(row, "focal_x") || "50";
+		const focalY = getRowValue(row, "focal_y") || "50";
+
+		if (media) {
+			media.innerHTML = "";
+			if (previewImg && previewImg.src) {
+				const img = document.createElement("img");
+				img.src = previewImg.src;
+				img.alt = "";
+				img.style.objectFit = fitMode;
+				img.style.objectPosition = focalX + "% " + focalY + "%";
+				media.appendChild(img);
+			} else {
+				const empty = document.createElement("span");
+				empty.textContent = getLabel("emptyMedia", "No media selected");
+				media.appendChild(empty);
+			}
+		}
+
+		if (title) {
+			title.textContent = getRowValue(row, "title");
+		}
+		if (subtitle) {
+			subtitle.textContent = getRowValue(row, "subtitle");
+		}
+		if (caption) {
+			caption.textContent = getRowValue(row, "caption");
+		}
+
+		if (cta) {
+			const label = getRowValue(row, "button_text");
+			cta.hidden = !label;
+			cta.textContent = label;
+		}
+
+		if (action) {
+			const actionType = getRowValue(row, "action_type");
+			action.hidden = !actionType || actionType === "none";
+			action.innerHTML = buildPreviewAction(row, actionType);
+		}
+	}
+
+	function buildPreviewAction(row, actionType) {
+		const prompt = getRowValue(row, "action_payload");
+		if (actionType === "reaction") {
+			return '<button type="button">Like</button><button type="button">Love</button><button type="button">Wow</button>';
+		}
+		if (actionType === "poll") {
+			const options = (getRowValue(row, "poll_options") || "Yes\nNo").split(/\r?\n/).filter((option) => option.trim()).slice(0, 5);
+			return "<p>" + escapeHtml(prompt || "What do you think?") + "</p>" + options.map((option) => {
+				const parts = option.split("|");
+				const color = /^#[0-9a-f]{3,6}$/i.test((parts[1] || "").trim()) ? ' style="--poll-color:' + parts[1].trim() + '"' : "";
+				return "<button type=\"button\"" + color + "><span>" + escapeHtml(parts[0].trim()) + "</span><small>0%</small></button>";
+			}).join("");
+		}
+		if (actionType === "question") {
+			return "<p>" + escapeHtml(prompt || "Send a reply") + "</p><input type=\"text\" disabled placeholder=\"" + escapeHtml(getRowValue(row, "reply_placeholder") || "Write a reply...") + "\">";
+		}
+		if (actionType === "countdown") {
+			return "<p>" + escapeHtml(prompt || "Countdown") + "</p><strong>" + escapeHtml(getRowValue(row, "countdown_datetime") || "00h 00m") + "</strong>";
+		}
+		return "";
+	}
+
+	function escapeHtml(value) {
+		return String(value || "").replace(/[&<>"']/g, function (char) {
+			return {
+				"&": "&amp;",
+				"<": "&lt;",
+				">": "&gt;",
+				'"': "&quot;",
+				"'": "&#039;",
+			}[char];
+		});
+	}
 })();

@@ -155,6 +155,8 @@ class Prime_Stories_Assets {
 						'mute'      => __( 'Mute video', 'prime-stories' ),
 						'unmute'    => __( 'Unmute video', 'prime-stories' ),
 						'replySent' => __( 'Reply sent', 'prime-stories' ),
+						'sending'   => __( 'Sending...', 'prime-stories' ),
+						'replyError'=> __( 'Could not send. Try again.', 'prime-stories' ),
 					),
 				)
 			);
@@ -228,7 +230,12 @@ class Prime_Stories_Assets {
 				'missingVideo' => __( 'Video media is missing.', 'prime-stories' ),
 				'missingImage' => __( 'Image media is missing.', 'prime-stories' ),
 				'missingPollOptions' => __( 'Add at least two poll options.', 'prime-stories' ),
+				'tooManyPollOptions' => __( 'Use no more than five poll options.', 'prime-stories' ),
 				'missingCountdown' => __( 'Countdown date is missing.', 'prime-stories' ),
+				'missingCtaUrl' => __( 'CTA URL is missing.', 'prime-stories' ),
+				'missingCtaLabel' => __( 'CTA label is missing.', 'prime-stories' ),
+				'resetFocal' => __( 'Reset focus', 'prime-stories' ),
+				'emptySlides' => __( 'No slides yet.', 'prime-stories' ),
 				'groupOptions'=> array_map(
 					static function ( $term ) {
 						return array(

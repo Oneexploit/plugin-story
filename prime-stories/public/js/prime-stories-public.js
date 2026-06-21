@@ -7,6 +7,7 @@
 	const namespace = (window.PrimeStories = window.PrimeStories || {});
 	const seenStorageKey = "primeStoriesSeen";
 	const seenSlideStorageKey = "primeStoriesSeenSlides";
+	const pollVotesStorageKey = "primeStoriesPollVotes";
 	const sessionStorageKey = "primeStoriesSessionId";
 	const sessionCookieKey = "prime_stories_session_id";
 	const reportedIssues = new Set();
@@ -263,6 +264,7 @@
 			this.prevButton = wrapper.querySelector("[data-story-prev]");
 			this.muteButton = wrapper.querySelector("[data-story-mute]");
 			this.autoplay = wrapper.getAttribute("data-autoplay") !== "false";
+			this.isRtl = wrapper.getAttribute("dir") === "rtl";
 			this.activeIndex = -1;
 			this.animationFrame = null;
 			this.progressDuration = 0;
@@ -276,6 +278,7 @@
 			this.sentImpressions = new Set();
 			this.seenIds = parseStoredIds();
 			this.seenSlideIds = parseStoredStrings(seenSlideStorageKey);
+			this.pollVotes = parseStoredStrings(pollVotesStorageKey);
 			this.remoteSeenIds = new Set();
 			this.touchStartX = 0;
 			this.touchStartY = 0;
@@ -393,6 +396,10 @@
 							return;
 						}
 
+						if (reaction.hasAttribute("data-poll-option") && !this.canVotePoll(slide, action)) {
+							return;
+						}
+
 						this.trackEvent("reaction", Number(slide.getAttribute("data-story-id")), {
 							reaction: reaction.getAttribute("data-story-reaction") || "",
 							slide: slide.getAttribute("data-slide-id") || "",
@@ -402,6 +409,7 @@
 						});
 						this.renderPollResult(action, reaction);
 						if (reaction.hasAttribute("data-poll-option")) {
+							this.rememberPollVote(slide, reaction.getAttribute("data-story-reaction") || "");
 							window.setTimeout(() => {
 								this.loadPollResults(action, Number(slide.getAttribute("data-story-id")), slide.getAttribute("data-slide-id") || "");
 							}, 450);
@@ -410,18 +418,54 @@
 
 					const reply = action.querySelector("[data-story-reply]");
 					const replySubmit = action.querySelector("[data-story-reply-submit]");
+					const replyStatus = action.querySelector("[data-story-reply-status]");
 					const sendReply = () => {
 						if (!reply || !reply.value.trim()) {
 							return;
 						}
 
+						if (action.classList.contains("is-sending")) {
+							return;
+						}
+
+						action.classList.add("is-sending");
+						action.classList.remove("has-error");
+						if (replyStatus) {
+							replyStatus.textContent = getLabel("sending", "Sending...");
+						}
+						if (replySubmit) {
+							replySubmit.disabled = true;
+						}
+
 						this.trackEvent("reply", Number(slide.getAttribute("data-story-id")), {
 							slide: slide.getAttribute("data-slide-id") || "",
 							reply: reply.value.trim(),
-						});
+						}).then((response) => {
+							if (!response || !response.ok) {
+								throw new Error("reply_failed");
+							}
 							reply.value = "";
-							reply.setAttribute("placeholder", getLabel("replySent", "Reply sent"));
+							reply.setAttribute("placeholder", action.getAttribute("data-success-message") || getLabel("replySent", "Reply sent"));
+							if (replyStatus) {
+								replyStatus.textContent = action.getAttribute("data-success-message") || getLabel("replySent", "Reply sent");
+							}
 							action.classList.add("is-complete");
+							if (action.getAttribute("data-allow-multiple-replies") !== "true") {
+								reply.disabled = true;
+							} else if (replySubmit) {
+								replySubmit.disabled = false;
+							}
+						}).catch(() => {
+							action.classList.add("has-error");
+							if (replyStatus) {
+								replyStatus.textContent = getLabel("replyError", "Could not send. Try again.");
+							}
+							if (replySubmit) {
+								replySubmit.disabled = false;
+							}
+						}).finally(() => {
+							action.classList.remove("is-sending");
+						});
 					};
 
 					if (reply) {
@@ -893,14 +937,37 @@
 
 			buttons.forEach((button) => {
 				const result = button.querySelector("[data-poll-result]");
-				button.disabled = true;
+				button.disabled = action.getAttribute("data-poll-vote-once") === "true";
 				if (result) {
-					result.hidden = false;
+					result.hidden = action.getAttribute("data-poll-show-results") !== "true";
 					result.textContent = button === selectedButton ? "100%" : "0%";
 				}
+				button.style.setProperty("--poll-fill", button === selectedButton ? "100%" : "0%");
 			});
 
 			action.classList.add("is-complete");
+		}
+
+		canVotePoll(slide, action) {
+			if (action.getAttribute("data-poll-vote-once") !== "true") {
+				return true;
+			}
+
+			return !this.pollVotes.has(slide.getAttribute("data-slide-id") || "");
+		}
+
+		rememberPollVote(slide, value) {
+			const slideId = slide.getAttribute("data-slide-id") || "";
+			if (!slideId) {
+				return;
+			}
+
+			this.pollVotes.add(slideId);
+			storeStringSet(pollVotesStorageKey, this.pollVotes);
+			slide.querySelectorAll("[data-poll-option]").forEach((button) => {
+				button.disabled = true;
+				button.classList.toggle("is-selected", (button.getAttribute("data-story-reaction") || "") === value);
+			});
 		}
 
 		loadPollResults(action, storyId, slideId) {
@@ -933,6 +1000,7 @@
 						result.hidden = false;
 						result.textContent = percent + "%";
 					}
+					button.style.setProperty("--poll-fill", percent + "%");
 				});
 			});
 		}
@@ -1010,10 +1078,25 @@
 				this.trapFocus(event);
 			} else if (event.key === "ArrowRight") {
 				event.preventDefault();
-				this.next();
+				if (this.isRtl) {
+					this.previous();
+				} else {
+					this.next();
+				}
 			} else if (event.key === "ArrowLeft") {
 				event.preventDefault();
-				this.previous();
+				if (this.isRtl) {
+					this.next();
+				} else {
+					this.previous();
+				}
+			} else if (event.key === " ") {
+				event.preventDefault();
+				if (this.isPaused) {
+					this.resume();
+				} else {
+					this.pause();
+				}
 			}
 		}
 
@@ -1123,10 +1206,10 @@
 
 		trackEvent(eventType, storyId, meta) {
 			if (!config.enableAnalytics || doNotTrack || !storyId) {
-				return;
+				return Promise.resolve(null);
 			}
 
-			request("/track", {
+			return request("/track", {
 				story_id: storyId,
 				event_type: eventType,
 				session_id: this.sessionId,

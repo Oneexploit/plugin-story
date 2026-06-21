@@ -219,6 +219,8 @@ function prime_stories_get_default_slide_meta() {
 		'video_id'        => 0,
 		'mobile_media_id' => 0,
 		'cover_image_id'  => 0,
+		'focal_x'         => 50,
+		'focal_y'         => 50,
 		'title'           => '',
 		'subtitle'        => '',
 		'caption'         => '',
@@ -231,7 +233,12 @@ function prime_stories_get_default_slide_meta() {
 		'action_type'     => 'none',
 		'action_payload'  => '',
 		'poll_options'    => '',
+		'poll_show_results' => 'yes',
+		'poll_vote_once'  => 'yes',
 		'reply_placeholder' => '',
+		'question_success_message' => '',
+		'question_helper_text' => '',
+		'allow_multiple_replies' => 'no',
 		'countdown_datetime' => '',
 	);
 }
@@ -249,7 +256,7 @@ function prime_stories_slide_has_content( $slide ) {
 		}
 	}
 
-	foreach ( array( 'title', 'subtitle', 'caption', 'button_text', 'button_url', 'action_payload', 'poll_options', 'reply_placeholder', 'countdown_datetime' ) as $content_key ) {
+	foreach ( array( 'title', 'subtitle', 'caption', 'button_text', 'button_url', 'action_payload', 'poll_options', 'reply_placeholder', 'question_success_message', 'question_helper_text', 'countdown_datetime' ) as $content_key ) {
 		if ( ! empty( $slide[ $content_key ] ) ) {
 			return true;
 		}
@@ -340,6 +347,8 @@ function prime_stories_normalize_slides( $slides, $post_id = 0, $legacy_meta = a
 			$slide['video_id']        = absint( $slide['video_id'] );
 			$slide['mobile_media_id'] = absint( $slide['mobile_media_id'] );
 			$slide['cover_image_id']  = absint( $slide['cover_image_id'] );
+			$slide['focal_x']         = max( 0, min( 100, absint( $slide['focal_x'] ) ) );
+			$slide['focal_y']         = max( 0, min( 100, absint( $slide['focal_y'] ) ) );
 			$slide['title']           = sanitize_text_field( (string) $slide['title'] );
 			$slide['subtitle']        = sanitize_text_field( (string) $slide['subtitle'] );
 			$slide['caption']         = wp_kses_post( (string) $slide['caption'] );
@@ -352,7 +361,12 @@ function prime_stories_normalize_slides( $slides, $post_id = 0, $legacy_meta = a
 			$slide['action_type']     = prime_stories_sanitize_select( (string) $slide['action_type'], array( 'none', 'reaction', 'poll', 'question', 'countdown' ), 'none' );
 			$slide['action_payload']  = sanitize_textarea_field( (string) $slide['action_payload'] );
 			$slide['poll_options']    = sanitize_textarea_field( (string) $slide['poll_options'] );
+			$slide['poll_show_results'] = prime_stories_sanitize_select( (string) $slide['poll_show_results'], array( 'yes', 'no' ), 'yes' );
+			$slide['poll_vote_once']  = prime_stories_sanitize_select( (string) $slide['poll_vote_once'], array( 'yes', 'no' ), 'yes' );
 			$slide['reply_placeholder'] = sanitize_text_field( (string) $slide['reply_placeholder'] );
+			$slide['question_success_message'] = sanitize_text_field( (string) $slide['question_success_message'] );
+			$slide['question_helper_text'] = sanitize_textarea_field( (string) $slide['question_helper_text'] );
+			$slide['allow_multiple_replies'] = prime_stories_sanitize_select( (string) $slide['allow_multiple_replies'], array( 'yes', 'no' ), 'no' );
 			$slide['countdown_datetime'] = sanitize_text_field( (string) $slide['countdown_datetime'] );
 
 			if ( prime_stories_slide_has_content( $slide ) ) {
@@ -502,6 +516,11 @@ function prime_stories_is_story_visible( $post_id ) {
 	}
 
 	$meta = prime_stories_get_story_meta( $post_id );
+	$group = prime_stories_get_primary_group_payload( $post_id );
+
+	if ( ! empty( $group ) && empty( $group['active'] ) ) {
+		return false;
+	}
 
 	return prime_stories_story_matches_schedule( $meta ) && prime_stories_story_matches_audience( $meta );
 }
@@ -523,6 +542,7 @@ function prime_stories_get_story_payload( $post_id ) {
 	$preview_image = $cover_url ? $cover_url : ( $first_slide['preview_image'] ?? prime_stories_get_logo_raster_url() );
 
 	$groups = wp_get_post_terms( $post_id, 'prime_story_group', array( 'fields' => 'slugs' ) );
+	$group_payload = prime_stories_get_primary_group_payload( $post_id );
 
 	if ( is_wp_error( $groups ) ) {
 		$groups = array();
@@ -549,6 +569,46 @@ function prime_stories_get_story_payload( $post_id ) {
 		'fit_mode'         => $meta['fit_mode'],
 		'slides'           => $slides,
 		'groups'           => $groups,
+		'primary_group'    => $group_payload,
+	);
+}
+
+/**
+ * Get display metadata for a story's first group/highlight.
+ *
+ * @param int $post_id Story ID.
+ * @return array<string, mixed>
+ */
+function prime_stories_get_primary_group_payload( $post_id ) {
+	$terms = wp_get_post_terms( $post_id, 'prime_story_group' );
+
+	if ( empty( $terms ) || is_wp_error( $terms ) ) {
+		return array();
+	}
+
+	usort(
+		$terms,
+		static function ( $left, $right ) {
+			$left_order  = (int) get_term_meta( $left->term_id, 'prime_stories_group_order', true );
+			$right_order = (int) get_term_meta( $right->term_id, 'prime_stories_group_order', true );
+
+			return $left_order <=> $right_order;
+		}
+	);
+
+	$term      = $terms[0];
+	$active    = get_term_meta( $term->term_id, 'prime_stories_group_active', true );
+	$avatar_id = absint( get_term_meta( $term->term_id, 'prime_stories_group_avatar_id', true ) );
+	$avatar    = $avatar_id ? wp_get_attachment_image_url( $avatar_id, 'medium' ) : '';
+
+	return array(
+		'id'      => (int) $term->term_id,
+		'slug'    => $term->slug,
+		'title'   => $term->name,
+		'active'  => 'no' !== $active,
+		'order'   => (int) get_term_meta( $term->term_id, 'prime_stories_group_order', true ),
+		'avatar'  => $avatar ? $avatar : '',
+		'count'   => (int) $term->count,
 	);
 }
 
@@ -598,6 +658,8 @@ function prime_stories_prepare_slide_payloads( $post_id, $slides ) {
 			'mobile_media_url' => $mobile_url,
 			'cover_image_url'  => $cover_url,
 			'preview_image'    => $preview_image,
+			'focal_x'          => (int) $slide['focal_x'],
+			'focal_y'          => (int) $slide['focal_y'],
 			'caption'          => $slide['caption'],
 			'subtitle'         => $slide['subtitle'],
 			'button_text'      => $slide['button_text'],
@@ -609,7 +671,12 @@ function prime_stories_prepare_slide_payloads( $post_id, $slides ) {
 			'action_type'      => $slide['action_type'],
 			'action_payload'   => $slide['action_payload'],
 			'poll_options'     => $slide['poll_options'],
+			'poll_show_results' => 'yes' === $slide['poll_show_results'],
+			'poll_vote_once'   => 'yes' === $slide['poll_vote_once'],
 			'reply_placeholder' => $slide['reply_placeholder'],
+			'question_success_message' => $slide['question_success_message'],
+			'question_helper_text' => $slide['question_helper_text'],
+			'allow_multiple_replies' => 'yes' === $slide['allow_multiple_replies'],
 			'countdown_datetime' => $slide['countdown_datetime'],
 		);
 	}
