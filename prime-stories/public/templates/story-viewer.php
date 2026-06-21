@@ -73,6 +73,9 @@ defined( 'ABSPATH' ) || exit;
 						data-button-target="<?php echo esc_attr( $story['button_target'] ); ?>"
 						data-open-on-click="<?php echo $story['open_on_click'] ? 'true' : 'false'; ?>"
 						data-fit-mode="<?php echo esc_attr( 'global' === $story['fit_mode'] ? $args['fit_mode'] : $story['fit_mode'] ); ?>"
+						data-story-group-start="<?php echo esc_attr( (string) ( $story['parent_start_index'] ?? 0 ) ); ?>"
+						data-story-group-count="<?php echo esc_attr( (string) ( $story['parent_slide_count'] ?? 1 ) ); ?>"
+						data-error-label="<?php esc_attr_e( 'Media could not be loaded.', 'prime-stories' ); ?>"
 						hidden
 					>
 						<div class="prime-stories-slide-header">
@@ -134,17 +137,27 @@ defined( 'ABSPATH' ) || exit;
 										<button type="button" data-story-reaction="love"><?php esc_html_e( 'Love', 'prime-stories' ); ?></button>
 										<button type="button" data-story-reaction="wow"><?php esc_html_e( 'Wow', 'prime-stories' ); ?></button>
 									<?php elseif ( 'poll' === $story['action_type'] ) : ?>
+										<?php
+										$poll_options = array_filter( array_map( 'trim', preg_split( '/\r\n|\r|\n/', (string) ( $story['poll_options'] ?: "Yes\nNo" ) ) ) );
+										?>
 										<p><?php echo esc_html( $story['action_payload'] ? $story['action_payload'] : __( 'What do you think?', 'prime-stories' ) ); ?></p>
-										<button type="button" data-story-reaction="poll_yes"><?php esc_html_e( 'Yes', 'prime-stories' ); ?></button>
-										<button type="button" data-story-reaction="poll_no"><?php esc_html_e( 'No', 'prime-stories' ); ?></button>
+										<div class="prime-stories-poll-options">
+											<?php foreach ( $poll_options as $poll_index => $poll_option ) : ?>
+												<button type="button" data-story-reaction="<?php echo esc_attr( 'poll_' . sanitize_key( $poll_option ) ); ?>" data-poll-option>
+													<span><?php echo esc_html( $poll_option ); ?></span>
+													<small data-poll-result hidden></small>
+												</button>
+											<?php endforeach; ?>
+										</div>
 									<?php elseif ( 'question' === $story['action_type'] ) : ?>
 										<label>
 											<span><?php echo esc_html( $story['action_payload'] ? $story['action_payload'] : __( 'Send a reply', 'prime-stories' ) ); ?></span>
-											<input type="text" data-story-reply maxlength="160">
+											<input type="text" data-story-reply maxlength="160" placeholder="<?php echo esc_attr( $story['reply_placeholder'] ? $story['reply_placeholder'] : __( 'Write a reply...', 'prime-stories' ) ); ?>">
 										</label>
 										<button type="button" data-story-reply-submit><?php esc_html_e( 'Send', 'prime-stories' ); ?></button>
 									<?php elseif ( 'countdown' === $story['action_type'] ) : ?>
-										<p data-story-countdown="<?php echo esc_attr( $story['action_payload'] ); ?>"><?php echo esc_html( $story['action_payload'] ); ?></p>
+										<p><?php echo esc_html( $story['action_payload'] ? $story['action_payload'] : __( 'Countdown', 'prime-stories' ) ); ?></p>
+										<strong data-story-countdown="<?php echo esc_attr( $story['countdown_datetime'] ); ?>"><?php echo esc_html( $story['countdown_datetime'] ); ?></strong>
 									<?php endif; ?>
 								</div>
 							<?php endif; ?>

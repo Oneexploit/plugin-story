@@ -228,6 +228,9 @@ class Prime_Stories_Meta_Boxes {
 				'fit_mode'        => prime_stories_sanitize_select( (string) ( $raw_slide['fit_mode'] ?? '' ), array( 'global', 'cover', 'contain' ), 'global' ),
 				'action_type'     => prime_stories_sanitize_select( (string) ( $raw_slide['action_type'] ?? '' ), array( 'none', 'reaction', 'poll', 'question', 'countdown' ), 'none' ),
 				'action_payload'  => sanitize_textarea_field( wp_unslash( (string) ( $raw_slide['action_payload'] ?? '' ) ) ),
+				'poll_options'    => sanitize_textarea_field( wp_unslash( (string) ( $raw_slide['poll_options'] ?? '' ) ) ),
+				'reply_placeholder' => sanitize_text_field( wp_unslash( (string) ( $raw_slide['reply_placeholder'] ?? '' ) ) ),
+				'countdown_datetime' => $this->sanitize_datetime_value( $raw_slide['countdown_datetime'] ?? '', 'slides.countdown_datetime', $post_id ),
 			);
 
 			if ( prime_stories_slide_has_content( $slide ) ) {
@@ -491,7 +494,12 @@ class Prime_Stories_Meta_Boxes {
 					<h3><?php esc_html_e( 'Story Slides', 'prime-stories' ); ?></h3>
 					<p><?php esc_html_e( 'Build the story frame by frame. Each slide owns its media, caption, CTA, timing, and interaction.', 'prime-stories' ); ?></p>
 				</div>
-				<button type="button" class="button button-primary" id="prime-stories-add-slide"><?php esc_html_e( 'Add slide', 'prime-stories' ); ?></button>
+				<div class="prime-stories-slide-tools">
+					<button type="button" class="button" data-story-preset="product"><?php esc_html_e( 'Product preset', 'prime-stories' ); ?></button>
+					<button type="button" class="button" data-story-preset="poll"><?php esc_html_e( 'Poll preset', 'prime-stories' ); ?></button>
+					<button type="button" class="button" data-story-preset="countdown"><?php esc_html_e( 'Countdown preset', 'prime-stories' ); ?></button>
+					<button type="button" class="button button-primary" id="prime-stories-add-slide"><?php esc_html_e( 'Add slide', 'prime-stories' ); ?></button>
+				</div>
 			</div>
 			<div id="prime-stories-slide-rows">
 				<?php foreach ( $slides as $index => $slide ) : ?>
@@ -516,9 +524,9 @@ class Prime_Stories_Meta_Boxes {
 		$prefix = 'prime_stories_slides[' . $index . ']';
 		$id     = $slide['id'] ? $slide['id'] : 'slide-' . ( is_numeric( $index ) ? ( (int) $index + 1 ) : '__INDEX__' );
 		?>
-		<div class="prime-stories-slide-row" data-slide-row>
+		<div class="prime-stories-slide-row" data-slide-row draggable="true">
 			<div class="prime-stories-slide-row-head">
-				<strong><?php esc_html_e( 'Slide', 'prime-stories' ); ?> <span data-slide-number><?php echo esc_html( is_numeric( $index ) ? (string) ( (int) $index + 1 ) : '__INDEX__' ); ?></span></strong>
+				<strong><span class="prime-stories-drag-handle" aria-hidden="true">::</span> <?php esc_html_e( 'Slide', 'prime-stories' ); ?> <span data-slide-number><?php echo esc_html( is_numeric( $index ) ? (string) ( (int) $index + 1 ) : '__INDEX__' ); ?></span></strong>
 				<div class="prime-stories-slide-row-actions">
 					<button type="button" class="button prime-stories-move-slide-up" aria-label="<?php esc_attr_e( 'Move slide up', 'prime-stories' ); ?>"><?php esc_html_e( 'Up', 'prime-stories' ); ?></button>
 					<button type="button" class="button prime-stories-move-slide-down" aria-label="<?php esc_attr_e( 'Move slide down', 'prime-stories' ); ?>"><?php esc_html_e( 'Down', 'prime-stories' ); ?></button>
@@ -535,30 +543,42 @@ class Prime_Stories_Meta_Boxes {
 					<span data-slide-preview-meta><?php echo esc_html( sprintf( __( '%1$s seconds - %2$s', 'prime-stories' ), (int) $slide['duration'], ucfirst( (string) $slide['action_type'] ) ) ); ?></span>
 				</div>
 				<div>
-					<div class="prime-stories-admin-grid">
-						<?php $this->render_slide_select( $prefix, 'media_type', __( 'Media type', 'prime-stories' ), $slide['media_type'], array( 'image' => __( 'Image', 'prime-stories' ), 'video' => __( 'Video', 'prime-stories' ) ) ); ?>
-						<?php $this->render_slide_media_field( $prefix, 'image_id', __( 'Image', 'prime-stories' ), $slide['image_id'], 'image' ); ?>
-						<?php $this->render_slide_media_field( $prefix, 'video_id', __( 'Video', 'prime-stories' ), $slide['video_id'], 'video' ); ?>
-						<?php $this->render_slide_media_field( $prefix, 'mobile_media_id', __( 'Mobile override', 'prime-stories' ), $slide['mobile_media_id'], 'media' ); ?>
-						<?php $this->render_slide_media_field( $prefix, 'cover_image_id', __( 'Cover', 'prime-stories' ), $slide['cover_image_id'], 'image' ); ?>
-						<?php $this->render_slide_input( $prefix, 'title', __( 'Slide title', 'prime-stories' ), $slide['title'] ); ?>
-						<?php $this->render_slide_input( $prefix, 'subtitle', __( 'Subtitle', 'prime-stories' ), $slide['subtitle'] ); ?>
-						<?php $this->render_slide_input( $prefix, 'button_text', __( 'Button text', 'prime-stories' ), $slide['button_text'] ); ?>
-						<?php $this->render_slide_input( $prefix, 'button_url', __( 'Button URL', 'prime-stories' ), $slide['button_url'], 'url' ); ?>
-						<?php $this->render_slide_select( $prefix, 'button_target', __( 'Button target', 'prime-stories' ), $slide['button_target'], array( 'same_tab' => __( 'Same tab', 'prime-stories' ), 'new_tab' => __( 'New tab', 'prime-stories' ) ) ); ?>
-						<?php $this->render_slide_select( $prefix, 'open_on_click', __( 'Open on media click', 'prime-stories' ), $slide['open_on_click'], array( 'no' => __( 'No', 'prime-stories' ), 'yes' => __( 'Yes', 'prime-stories' ) ) ); ?>
-						<?php $this->render_slide_input( $prefix, 'duration', __( 'Duration', 'prime-stories' ), (string) $slide['duration'], 'number' ); ?>
-						<?php $this->render_slide_select( $prefix, 'fit_mode', __( 'Fit mode', 'prime-stories' ), $slide['fit_mode'], array( 'global' => __( 'Global', 'prime-stories' ), 'cover' => __( 'Fill frame', 'prime-stories' ), 'contain' => __( 'Show full media', 'prime-stories' ) ) ); ?>
-						<?php $this->render_slide_select( $prefix, 'action_type', __( 'Story action', 'prime-stories' ), $slide['action_type'], array( 'none' => __( 'None', 'prime-stories' ), 'reaction' => __( 'Reactions', 'prime-stories' ), 'poll' => __( 'Poll', 'prime-stories' ), 'question' => __( 'Question', 'prime-stories' ), 'countdown' => __( 'Countdown', 'prime-stories' ) ) ); ?>
+					<div class="prime-stories-slide-tabs" role="tablist">
+						<button type="button" class="button is-active" data-slide-tab="media"><?php esc_html_e( 'Media', 'prime-stories' ); ?></button>
+						<button type="button" class="button" data-slide-tab="text"><?php esc_html_e( 'Text', 'prime-stories' ); ?></button>
+						<button type="button" class="button" data-slide-tab="cta"><?php esc_html_e( 'CTA', 'prime-stories' ); ?></button>
+						<button type="button" class="button" data-slide-tab="action"><?php esc_html_e( 'Action', 'prime-stories' ); ?></button>
 					</div>
-					<label class="prime-stories-admin-field">
+					<div class="prime-stories-admin-grid">
+						<?php $this->render_slide_select( $prefix, 'media_type', __( 'Media type', 'prime-stories' ), $slide['media_type'], array( 'image' => __( 'Image', 'prime-stories' ), 'video' => __( 'Video', 'prime-stories' ) ), 'media' ); ?>
+						<?php $this->render_slide_media_field( $prefix, 'image_id', __( 'Image', 'prime-stories' ), $slide['image_id'], 'image', 'media' ); ?>
+						<?php $this->render_slide_media_field( $prefix, 'video_id', __( 'Video', 'prime-stories' ), $slide['video_id'], 'video', 'media' ); ?>
+						<?php $this->render_slide_media_field( $prefix, 'mobile_media_id', __( 'Mobile override', 'prime-stories' ), $slide['mobile_media_id'], 'media', 'media' ); ?>
+						<?php $this->render_slide_media_field( $prefix, 'cover_image_id', __( 'Cover', 'prime-stories' ), $slide['cover_image_id'], 'image', 'media' ); ?>
+						<?php $this->render_slide_input( $prefix, 'title', __( 'Slide title', 'prime-stories' ), $slide['title'], 'text', 'text' ); ?>
+						<?php $this->render_slide_input( $prefix, 'subtitle', __( 'Subtitle', 'prime-stories' ), $slide['subtitle'], 'text', 'text' ); ?>
+						<?php $this->render_slide_input( $prefix, 'button_text', __( 'Button text', 'prime-stories' ), $slide['button_text'], 'text', 'cta' ); ?>
+						<?php $this->render_slide_input( $prefix, 'button_url', __( 'Button URL', 'prime-stories' ), $slide['button_url'], 'url', 'cta' ); ?>
+						<?php $this->render_slide_select( $prefix, 'button_target', __( 'Button target', 'prime-stories' ), $slide['button_target'], array( 'same_tab' => __( 'Same tab', 'prime-stories' ), 'new_tab' => __( 'New tab', 'prime-stories' ) ), 'cta' ); ?>
+						<?php $this->render_slide_select( $prefix, 'open_on_click', __( 'Open on media click', 'prime-stories' ), $slide['open_on_click'], array( 'no' => __( 'No', 'prime-stories' ), 'yes' => __( 'Yes', 'prime-stories' ) ), 'cta' ); ?>
+						<?php $this->render_slide_input( $prefix, 'duration', __( 'Duration', 'prime-stories' ), (string) $slide['duration'], 'number', 'media' ); ?>
+						<?php $this->render_slide_select( $prefix, 'fit_mode', __( 'Fit mode', 'prime-stories' ), $slide['fit_mode'], array( 'global' => __( 'Global', 'prime-stories' ), 'cover' => __( 'Fill frame', 'prime-stories' ), 'contain' => __( 'Show full media', 'prime-stories' ) ), 'media' ); ?>
+						<?php $this->render_slide_select( $prefix, 'action_type', __( 'Story action', 'prime-stories' ), $slide['action_type'], array( 'none' => __( 'None', 'prime-stories' ), 'reaction' => __( 'Reactions', 'prime-stories' ), 'poll' => __( 'Poll', 'prime-stories' ), 'question' => __( 'Question', 'prime-stories' ), 'countdown' => __( 'Countdown', 'prime-stories' ) ), 'action' ); ?>
+					</div>
+					<label class="prime-stories-admin-field" data-slide-panel="text">
 						<span><?php esc_html_e( 'Caption', 'prime-stories' ); ?></span>
 						<textarea rows="3" name="<?php echo esc_attr( $prefix . '[caption]' ); ?>"><?php echo esc_textarea( (string) $slide['caption'] ); ?></textarea>
 					</label>
-					<label class="prime-stories-admin-field" data-slide-action-payload-field>
-						<span><?php esc_html_e( 'Action text / payload', 'prime-stories' ); ?></span>
+					<label class="prime-stories-admin-field" data-slide-panel="action" data-slide-action-payload-field>
+						<span><?php esc_html_e( 'Prompt / question text', 'prime-stories' ); ?></span>
 						<textarea rows="2" name="<?php echo esc_attr( $prefix . '[action_payload]' ); ?>"><?php echo esc_textarea( (string) $slide['action_payload'] ); ?></textarea>
 					</label>
+					<label class="prime-stories-admin-field" data-slide-panel="action" data-slide-poll-options-field>
+						<span><?php esc_html_e( 'Poll options', 'prime-stories' ); ?></span>
+						<textarea rows="3" name="<?php echo esc_attr( $prefix . '[poll_options]' ); ?>" placeholder="<?php esc_attr_e( 'One option per line', 'prime-stories' ); ?>"><?php echo esc_textarea( (string) $slide['poll_options'] ); ?></textarea>
+					</label>
+					<?php $this->render_slide_input( $prefix, 'reply_placeholder', __( 'Reply placeholder', 'prime-stories' ), $slide['reply_placeholder'], 'text', 'action' ); ?>
+					<?php $this->render_slide_input( $prefix, 'countdown_datetime', __( 'Countdown date and time', 'prime-stories' ), $this->format_datetime_input( $slide['countdown_datetime'] ), 'datetime-local', 'action' ); ?>
 				</div>
 			</div>
 		</div>
@@ -590,18 +610,23 @@ class Prime_Stories_Meta_Boxes {
 		<?php
 	}
 
-	private function render_slide_input( $prefix, $key, $label, $value, $type = 'text' ) {
+	private function format_datetime_input( $value ) {
+		$timestamp = $value ? strtotime( (string) $value ) : false;
+		return $timestamp ? wp_date( 'Y-m-d\TH:i', $timestamp ) : '';
+	}
+
+	private function render_slide_input( $prefix, $key, $label, $value, $type = 'text', $panel = '' ) {
 		?>
-		<label class="prime-stories-admin-field">
+		<label class="prime-stories-admin-field" <?php echo $panel ? 'data-slide-panel="' . esc_attr( $panel ) . '"' : ''; ?>>
 			<span><?php echo esc_html( $label ); ?></span>
 			<input type="<?php echo esc_attr( $type ); ?>" name="<?php echo esc_attr( $prefix . '[' . $key . ']' ); ?>" value="<?php echo esc_attr( (string) $value ); ?>">
 		</label>
 		<?php
 	}
 
-	private function render_slide_select( $prefix, $key, $label, $value, $options ) {
+	private function render_slide_select( $prefix, $key, $label, $value, $options, $panel = '' ) {
 		?>
-		<label class="prime-stories-admin-field">
+		<label class="prime-stories-admin-field" <?php echo $panel ? 'data-slide-panel="' . esc_attr( $panel ) . '"' : ''; ?>>
 			<span><?php echo esc_html( $label ); ?></span>
 			<select name="<?php echo esc_attr( $prefix . '[' . $key . ']' ); ?>">
 				<?php foreach ( $options as $option_value => $option_label ) : ?>
@@ -612,13 +637,13 @@ class Prime_Stories_Meta_Boxes {
 		<?php
 	}
 
-	private function render_slide_media_field( $prefix, $key, $label, $attachment_id, $library_type ) {
+	private function render_slide_media_field( $prefix, $key, $label, $attachment_id, $library_type, $panel = '' ) {
 		$field_id       = sanitize_html_class( str_replace( array( '[', ']' ), '-', $prefix . '-' . $key ) );
 		$attachment_id = absint( $attachment_id );
 		$preview_url   = $attachment_id ? wp_get_attachment_image_url( $attachment_id, 'thumbnail' ) : '';
 		$file_url      = $attachment_id ? wp_get_attachment_url( $attachment_id ) : '';
 		?>
-		<div class="prime-stories-admin-field prime-stories-media-field">
+		<div class="prime-stories-admin-field prime-stories-media-field" <?php echo $panel ? 'data-slide-panel="' . esc_attr( $panel ) . '"' : ''; ?>>
 			<label for="<?php echo esc_attr( $field_id ); ?>"><?php echo esc_html( $label ); ?></label>
 			<input type="hidden" id="<?php echo esc_attr( $field_id ); ?>" name="<?php echo esc_attr( $prefix . '[' . $key . ']' ); ?>" value="<?php echo esc_attr( (string) $attachment_id ); ?>">
 			<div class="prime-stories-media-controls">

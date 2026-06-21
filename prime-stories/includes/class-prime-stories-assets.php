@@ -225,6 +225,10 @@ class Prime_Stories_Assets {
 				'emptyMedia'  => __( 'No media selected', 'prime-stories' ),
 				'mediaChosen' => __( 'Media selected', 'prime-stories' ),
 				'untitledSlide' => __( 'Untitled slide', 'prime-stories' ),
+				'missingVideo' => __( 'Video media is missing.', 'prime-stories' ),
+				'missingImage' => __( 'Image media is missing.', 'prime-stories' ),
+				'missingPollOptions' => __( 'Add at least two poll options.', 'prime-stories' ),
+				'missingCountdown' => __( 'Countdown date is missing.', 'prime-stories' ),
 				'groupOptions'=> array_map(
 					static function ( $term ) {
 						return array(

@@ -176,6 +176,8 @@ class Prime_Stories_Public {
 				$slide['parent_story_id']    = (int) $story['id'];
 				$slide['parent_story_title'] = (string) $story['title'];
 				$slide['parent_preview']     = (string) $story['preview_image'];
+				$slide['parent_start_index'] = (int) $story['start_index'];
+				$slide['parent_slide_count'] = max( 1, count( $slides ) );
 				$slide['global_index']       = count( $flat_slides );
 				$flat_slides[]               = $slide;
 			}

@@ -433,6 +433,49 @@ class Prime_Stories_Analytics {
 	}
 
 	/**
+	 * Get event value counts for one story slide.
+	 *
+	 * @param int    $story_id Story ID.
+	 * @param string $slide_id Slide ID.
+	 * @param string $event_type Event type.
+	 * @return array<string, int>
+	 */
+	public function get_event_value_counts( $story_id, $slide_id = '', $event_type = 'reaction' ) {
+		global $wpdb;
+
+		if ( ! $this->table_exists() ) {
+			return array();
+		}
+
+		$story_id   = absint( $story_id );
+		$slide_id   = sanitize_key( (string) $slide_id );
+		$event_type = sanitize_key( (string) $event_type );
+		$table      = $this->get_table_name();
+
+		$where  = 'story_id = %d AND event_type = %s AND event_value IS NOT NULL AND event_value != ""';
+		$params = array( $story_id, $event_type );
+
+		if ( $slide_id ) {
+			$where .= ' AND slide_id = %s';
+			$params[] = $slide_id;
+		}
+
+		$sql = $wpdb->prepare(
+			"SELECT event_value, COUNT(*) AS total FROM {$table} WHERE {$where} GROUP BY event_value",
+			$params
+		); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+
+		$rows = $wpdb->get_results( $sql, ARRAY_A );
+		$counts = array();
+
+		foreach ( is_array( $rows ) ? $rows : array() as $row ) {
+			$counts[ sanitize_key( (string) $row['event_value'] ) ] = absint( $row['total'] );
+		}
+
+		return $counts;
+	}
+
+	/**
 	 * Get a lightweight request fingerprint.
 	 *
 	 * @return string

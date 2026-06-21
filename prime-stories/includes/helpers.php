@@ -230,6 +230,9 @@ function prime_stories_get_default_slide_meta() {
 		'fit_mode'        => 'global',
 		'action_type'     => 'none',
 		'action_payload'  => '',
+		'poll_options'    => '',
+		'reply_placeholder' => '',
+		'countdown_datetime' => '',
 	);
 }
 
@@ -246,7 +249,7 @@ function prime_stories_slide_has_content( $slide ) {
 		}
 	}
 
-	foreach ( array( 'title', 'subtitle', 'caption', 'button_text', 'button_url', 'action_payload' ) as $content_key ) {
+	foreach ( array( 'title', 'subtitle', 'caption', 'button_text', 'button_url', 'action_payload', 'poll_options', 'reply_placeholder', 'countdown_datetime' ) as $content_key ) {
 		if ( ! empty( $slide[ $content_key ] ) ) {
 			return true;
 		}
@@ -348,6 +351,9 @@ function prime_stories_normalize_slides( $slides, $post_id = 0, $legacy_meta = a
 			$slide['fit_mode']        = prime_stories_sanitize_select( (string) $slide['fit_mode'], array( 'global', 'cover', 'contain' ), 'global' );
 			$slide['action_type']     = prime_stories_sanitize_select( (string) $slide['action_type'], array( 'none', 'reaction', 'poll', 'question', 'countdown' ), 'none' );
 			$slide['action_payload']  = sanitize_textarea_field( (string) $slide['action_payload'] );
+			$slide['poll_options']    = sanitize_textarea_field( (string) $slide['poll_options'] );
+			$slide['reply_placeholder'] = sanitize_text_field( (string) $slide['reply_placeholder'] );
+			$slide['countdown_datetime'] = sanitize_text_field( (string) $slide['countdown_datetime'] );
 
 			if ( prime_stories_slide_has_content( $slide ) ) {
 				$normalized[] = $slide;
@@ -602,6 +608,9 @@ function prime_stories_prepare_slide_payloads( $post_id, $slides ) {
 			'open_on_click'    => 'yes' === $slide['open_on_click'],
 			'action_type'      => $slide['action_type'],
 			'action_payload'   => $slide['action_payload'],
+			'poll_options'     => $slide['poll_options'],
+			'reply_placeholder' => $slide['reply_placeholder'],
+			'countdown_datetime' => $slide['countdown_datetime'],
 		);
 	}
 

@@ -97,6 +97,14 @@
 	color: #475569;
 }
 
+.prime-stories-slide-tools,
+.prime-stories-slide-tabs {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px;
+}
+
 .prime-stories-slides-editor {
 	margin-bottom: 18px;
 }
@@ -107,6 +115,11 @@
 	border: 1px solid #d9dfe8;
 	border-radius: 12px;
 	background: #f8fafc;
+}
+
+.prime-stories-slide-row.is-dragging {
+	opacity: 0.55;
+	outline: 2px dashed #2563eb;
 }
 
 .prime-stories-slide-row:last-child {
@@ -121,6 +134,21 @@
 	margin-bottom: 14px;
 }
 
+.prime-stories-drag-handle {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 22px;
+	height: 22px;
+	margin-inline-end: 6px;
+	border-radius: 6px;
+	background: #e2e8f0;
+	color: #475569;
+	cursor: grab;
+	font-weight: 800;
+	letter-spacing: -2px;
+}
+
 .prime-stories-slide-row-actions {
 	display: flex;
 	flex-wrap: wrap;
@@ -133,6 +161,18 @@
 	grid-template-columns: minmax(170px, 220px) minmax(0, 1fr);
 	gap: 18px;
 	align-items: start;
+}
+
+.prime-stories-slide-tabs {
+	margin-bottom: 14px;
+	padding-bottom: 10px;
+	border-bottom: 1px solid #e2e8f0;
+}
+
+.prime-stories-slide-tabs .button.is-active {
+	border-color: #2563eb;
+	background: #eff6ff;
+	color: #1d4ed8;
 }
 
 .prime-stories-slide-preview {
@@ -171,6 +211,16 @@
 .prime-stories-slide-preview span {
 	color: #64748b;
 	font-size: 12px;
+}
+
+.prime-stories-slide-warnings {
+	margin-top: 12px;
+	padding: 10px 12px;
+	border-left: 4px solid #d97706;
+	border-radius: 8px;
+	background: #fffbeb;
+	color: #92400e;
+	font-weight: 600;
 }
 
 .prime-stories-admin-field {

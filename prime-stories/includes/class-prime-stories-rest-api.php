@@ -124,6 +124,32 @@ class Prime_Stories_REST_API {
 
 		register_rest_route(
 			'prime-stories/v1',
+			'/results',
+			array(
+				'methods'             => WP_REST_Server::CREATABLE,
+				'callback'            => array( $this, 'get_results' ),
+				'permission_callback' => array( $this, 'check_public_write_permission' ),
+				'args'                => array(
+					'story_id' => array(
+						'required'          => true,
+						'type'              => 'integer',
+						'sanitize_callback' => 'absint',
+						'validate_callback' => array( $this, 'validate_story_id' ),
+					),
+					'slide_id' => array(
+						'type'              => 'string',
+						'sanitize_callback' => 'sanitize_key',
+					),
+					'event_type' => array(
+						'type'              => 'string',
+						'sanitize_callback' => 'sanitize_key',
+					),
+				),
+			)
+		);
+
+		register_rest_route(
+			'prime-stories/v1',
 			'/log',
 			array(
 				'methods'             => WP_REST_Server::CREATABLE,
@@ -303,6 +329,37 @@ class Prime_Stories_REST_API {
 						'limit' => max( 1, min( $limit ? $limit : 10, 50 ) ),
 					)
 				),
+			)
+		);
+	}
+
+	/**
+	 * Return aggregate interaction results for a slide.
+	 *
+	 * @param WP_REST_Request $request Request object.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function get_results( WP_REST_Request $request ) {
+		$story_id   = absint( $request->get_param( 'story_id' ) );
+		$slide_id   = sanitize_key( (string) $request->get_param( 'slide_id' ) );
+		$event_type = sanitize_key( (string) $request->get_param( 'event_type' ) );
+		$event_type = $event_type ? $event_type : 'reaction';
+
+		if ( ! $this->validate_story_id( $story_id ) ) {
+			return new WP_Error( 'prime_stories_invalid_story', __( 'Invalid story.', 'prime-stories' ), array( 'status' => 400 ) );
+		}
+
+		if ( $slide_id && ! $this->validate_slide_id( $story_id, $slide_id ) ) {
+			return new WP_Error( 'prime_stories_invalid_slide', __( 'Invalid story slide.', 'prime-stories' ), array( 'status' => 400 ) );
+		}
+
+		$counts = Prime_Stories_Analytics::get_instance()->get_event_value_counts( $story_id, $slide_id, $event_type );
+
+		return rest_ensure_response(
+			array(
+				'success' => true,
+				'counts'  => $counts,
+				'total'   => array_sum( $counts ),
 			)
 		);
 	}

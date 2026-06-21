@@ -281,6 +281,7 @@
 			this.touchStartY = 0;
 			this.keydownHandler = this.handleKeydown.bind(this);
 			this.visibilityHandler = this.handleVisibilityChange.bind(this);
+			this.countdownTimers = [];
 
 			if (!this.items.length || !this.viewer || !this.dialog) {
 				return;
@@ -289,6 +290,7 @@
 			wrapper.dataset.primeStoriesInitialized = "true";
 			this.restoreSeenState();
 			this.bind();
+			this.initCountdowns();
 			this.observeImpressions();
 
 			if (!config.lazyLoadMedia) {
@@ -398,6 +400,12 @@
 						action.querySelectorAll("[data-story-reaction]").forEach((button) => {
 							button.classList.toggle("is-selected", button === reaction);
 						});
+						this.renderPollResult(action, reaction);
+						if (reaction.hasAttribute("data-poll-option")) {
+							window.setTimeout(() => {
+								this.loadPollResults(action, Number(slide.getAttribute("data-story-id")), slide.getAttribute("data-slide-id") || "");
+							}, 450);
+						}
 					});
 
 					const reply = action.querySelector("[data-story-reply]");
@@ -411,8 +419,9 @@
 							slide: slide.getAttribute("data-slide-id") || "",
 							reply: reply.value.trim(),
 						});
-						reply.value = "";
-						reply.setAttribute("placeholder", getLabel("replySent", "Reply sent"));
+							reply.value = "";
+							reply.setAttribute("placeholder", getLabel("replySent", "Reply sent"));
+							action.classList.add("is-complete");
 					};
 
 					if (reply) {
@@ -526,6 +535,7 @@
 			this.slides.forEach((slide) => {
 				slide.hidden = true;
 			});
+			this.dialog.classList.remove("is-loading", "has-media-error");
 			this.activeIndex = -1;
 			this.isPaused = false;
 			this.wasPlayingVideo = false;
@@ -608,13 +618,34 @@
 
 			const source = chooseSource(media);
 			if (!source) {
+				slide.classList.add("has-media-error");
 				return;
+			}
+
+			const isActiveSlide = this.slides[this.activeIndex] === slide;
+			slide.classList.add("is-loading-media");
+			slide.classList.remove("has-media-error");
+			if (isActiveSlide) {
+				this.dialog.classList.add("is-loading");
+				this.dialog.classList.remove("has-media-error");
 			}
 
 			if (media.tagName === "IMG") {
 				if (!media.dataset.primeStoriesErrorBound) {
 					media.dataset.primeStoriesErrorBound = "true";
+					media.addEventListener("load", () => {
+						slide.classList.remove("is-loading-media");
+						if (this.slides[this.activeIndex] === slide) {
+							this.dialog.classList.remove("is-loading");
+						}
+					});
 					media.addEventListener("error", () => {
+						slide.classList.remove("is-loading-media");
+						slide.classList.add("has-media-error");
+						if (this.slides[this.activeIndex] === slide) {
+							this.dialog.classList.remove("is-loading");
+							this.dialog.classList.add("has-media-error");
+						}
 						reportClientIssue(
 							"Story image failed to load.",
 							{
@@ -635,7 +666,19 @@
 
 			if (!media.dataset.primeStoriesErrorBound) {
 				media.dataset.primeStoriesErrorBound = "true";
+				media.addEventListener("loadeddata", () => {
+					slide.classList.remove("is-loading-media");
+					if (this.slides[this.activeIndex] === slide) {
+						this.dialog.classList.remove("is-loading");
+					}
+				});
 				media.addEventListener("error", () => {
+					slide.classList.remove("is-loading-media");
+					slide.classList.add("has-media-error");
+					if (this.slides[this.activeIndex] === slide) {
+						this.dialog.classList.remove("is-loading");
+						this.dialog.classList.add("has-media-error");
+					}
 					reportClientIssue(
 						"Story video failed to load.",
 						{
@@ -836,6 +879,84 @@
 			return {
 				slide: slide ? slide.getAttribute("data-slide-id") || "" : "",
 			};
+		}
+
+		renderPollResult(action, selectedButton) {
+			if (!selectedButton || !selectedButton.hasAttribute("data-poll-option")) {
+				return;
+			}
+
+			const buttons = Array.from(action.querySelectorAll("[data-poll-option]"));
+			if (!buttons.length) {
+				return;
+			}
+
+			buttons.forEach((button) => {
+				const result = button.querySelector("[data-poll-result]");
+				button.disabled = true;
+				if (result) {
+					result.hidden = false;
+					result.textContent = button === selectedButton ? "100%" : "0%";
+				}
+			});
+
+			action.classList.add("is-complete");
+		}
+
+		loadPollResults(action, storyId, slideId) {
+			request("/results", {
+				story_id: storyId,
+				slide_id: slideId,
+				event_type: "reaction",
+			}).then((response) => {
+				if (!response || !response.ok) {
+					return null;
+				}
+
+				return response.json();
+			}).then((payload) => {
+				if (!payload || !payload.counts) {
+					return;
+				}
+
+				const total = Number(payload.total) || 0;
+				if (!total) {
+					return;
+				}
+
+				action.querySelectorAll("[data-poll-option]").forEach((button) => {
+					const key = button.getAttribute("data-story-reaction") || "";
+					const count = Number(payload.counts[key]) || 0;
+					const percent = Math.round((count / total) * 100);
+					const result = button.querySelector("[data-poll-result]");
+					if (result) {
+						result.hidden = false;
+						result.textContent = percent + "%";
+					}
+				});
+			});
+		}
+
+		initCountdowns() {
+			this.wrapper.querySelectorAll("[data-story-countdown]").forEach((node) => {
+				const target = node.getAttribute("data-story-countdown");
+				const targetTime = target ? Date.parse(target.replace(" ", "T")) : NaN;
+				if (!targetTime || Number.isNaN(targetTime)) {
+					return;
+				}
+
+				const render = () => {
+					const remaining = Math.max(0, targetTime - Date.now());
+					const days = Math.floor(remaining / 86400000);
+					const hours = Math.floor((remaining % 86400000) / 3600000);
+					const minutes = Math.floor((remaining % 3600000) / 60000);
+					const seconds = Math.floor((remaining % 60000) / 1000);
+					node.textContent = [days ? days + "d" : "", String(hours).padStart(2, "0") + "h", String(minutes).padStart(2, "0") + "m", String(seconds).padStart(2, "0") + "s"].filter(Boolean).join(" ");
+				};
+
+				render();
+				this.countdownTimers.push(window.setInterval(render, 1000));
+			});
 		}
 
 		completeSlide(storyId, slide) {

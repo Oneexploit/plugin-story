@@ -60,6 +60,17 @@
 			image.src = previewUrl;
 			image.alt = "";
 			preview.appendChild(image);
+			const row = input.closest("[data-slide-row]");
+			if (row) {
+				const previewMedia = row.querySelector(".prime-stories-slide-preview-media");
+				if (previewMedia) {
+					previewMedia.textContent = "";
+					const previewImage = document.createElement("img");
+					previewImage.src = previewUrl;
+					previewImage.alt = "";
+					previewMedia.appendChild(previewImage);
+				}
+			}
 			return;
 		}
 
@@ -130,6 +141,15 @@
 			}
 		}
 
+		const tabButton = event.target.closest("[data-slide-tab]");
+		if (tabButton) {
+			event.preventDefault();
+			const row = tabButton.closest("[data-slide-row]");
+			if (row) {
+				setActiveSlideTab(row, tabButton.getAttribute("data-slide-tab") || "media");
+			}
+		}
+
 		const moveUpButton = event.target.closest(".prime-stories-move-slide-up");
 		if (moveUpButton) {
 			event.preventDefault();
@@ -171,6 +191,7 @@
 	const addSlideButton = document.getElementById("prime-stories-add-slide");
 	const slidesContainer = document.getElementById("prime-stories-slide-rows");
 	const slideTemplate = document.getElementById("tmpl-prime-stories-slide-row");
+	let draggedSlide = null;
 
 	function renumberSlides() {
 		if (!slidesContainer) {
@@ -192,6 +213,54 @@
 			slidesContainer.insertAdjacentHTML("beforeend", html);
 			renumberSlides();
 			syncSlideRows();
+		});
+	}
+
+	document.addEventListener("click", function (event) {
+		const presetButton = event.target.closest("[data-story-preset]");
+		if (!presetButton || !slidesContainer || !slideTemplate) {
+			return;
+		}
+
+		event.preventDefault();
+		const row = addSlideFromTemplate();
+		applyPreset(row, presetButton.getAttribute("data-story-preset") || "");
+	});
+
+	if (slidesContainer) {
+		slidesContainer.addEventListener("dragstart", function (event) {
+			const row = event.target.closest("[data-slide-row]");
+			if (!row) {
+				return;
+			}
+
+			draggedSlide = row;
+			row.classList.add("is-dragging");
+			event.dataTransfer.effectAllowed = "move";
+		});
+
+		slidesContainer.addEventListener("dragover", function (event) {
+			if (!draggedSlide) {
+				return;
+			}
+
+			event.preventDefault();
+			const target = event.target.closest("[data-slide-row]");
+			if (!target || target === draggedSlide) {
+				return;
+			}
+
+			const box = target.getBoundingClientRect();
+			const after = event.clientY > box.top + box.height / 2;
+			slidesContainer.insertBefore(draggedSlide, after ? target.nextSibling : target);
+		});
+
+		slidesContainer.addEventListener("dragend", function () {
+			if (draggedSlide) {
+				draggedSlide.classList.remove("is-dragging");
+			}
+			draggedSlide = null;
+			renumberSlides();
 		});
 	}
 
@@ -238,6 +307,9 @@
 
 		const mediaType = row.querySelector('select[name$="[media_type]"]');
 		const actionType = row.querySelector('select[name$="[action_type]"]');
+		const activeTab = (row.querySelector("[data-slide-tab].is-active") || {}).getAttribute
+			? row.querySelector("[data-slide-tab].is-active").getAttribute("data-slide-tab")
+			: "media";
 		const imageInput = row.querySelector('input[name$="[image_id]"]');
 		const videoInput = row.querySelector('input[name$="[video_id]"]');
 		const actionPayload = row.querySelector("[data-slide-action-payload-field]");
@@ -245,23 +317,46 @@
 		const duration = row.querySelector('input[name$="[duration]"]');
 		const previewTitle = row.querySelector("[data-slide-preview-title]");
 		const previewMeta = row.querySelector("[data-slide-preview-meta]");
+		const buttonText = row.querySelector('input[name$="[button_text]"]');
+		const buttonUrl = row.querySelector('input[name$="[button_url]"]');
 
 		if (imageInput) {
 			const imageField = imageInput.closest(".prime-stories-media-field");
 			if (imageField) {
-				imageField.hidden = mediaType && mediaType.value === "video";
+				imageField.hidden = activeTab !== "media" || (mediaType && mediaType.value === "video");
 			}
 		}
 
 		if (videoInput) {
 			const videoField = videoInput.closest(".prime-stories-media-field");
 			if (videoField) {
-				videoField.hidden = !mediaType || mediaType.value !== "video";
+				videoField.hidden = activeTab !== "media" || !mediaType || mediaType.value !== "video";
 			}
 		}
 
 		if (actionPayload) {
-			actionPayload.hidden = !actionType || actionType.value === "none" || actionType.value === "reaction";
+			actionPayload.hidden = activeTab !== "action" || !actionType || actionType.value === "none" || actionType.value === "reaction";
+		}
+
+		const pollOptions = row.querySelector("[data-slide-poll-options-field]");
+		if (pollOptions) {
+			pollOptions.hidden = activeTab !== "action" || !actionType || actionType.value !== "poll";
+		}
+
+		const countdownInput = row.querySelector('input[name$="[countdown_datetime]"]');
+		if (countdownInput) {
+			const countdownField = countdownInput.closest(".prime-stories-admin-field");
+			if (countdownField) {
+				countdownField.hidden = activeTab !== "action" || !actionType || actionType.value !== "countdown";
+			}
+		}
+
+		const replyPlaceholder = row.querySelector('input[name$="[reply_placeholder]"]');
+		if (replyPlaceholder) {
+			const replyField = replyPlaceholder.closest(".prime-stories-admin-field");
+			if (replyField) {
+				replyField.hidden = activeTab !== "action" || !actionType || actionType.value !== "question";
+			}
 		}
 
 		if (previewTitle && title) {
@@ -269,8 +364,105 @@
 		}
 
 		if (previewMeta) {
-			previewMeta.textContent = [duration && duration.value ? duration.value + "s" : "", actionType ? actionType.value : ""].filter(Boolean).join(" - ");
+			previewMeta.textContent = [duration && duration.value ? duration.value + "s" : "", actionType ? actionType.value : "", buttonText && buttonText.value && buttonUrl && buttonUrl.value ? "CTA" : ""].filter(Boolean).join(" - ");
 		}
+
+		validateSlideRow(row);
+	}
+
+	function setActiveSlideTab(row, tabName) {
+		row.querySelectorAll("[data-slide-tab]").forEach((button) => {
+			button.classList.toggle("is-active", button.getAttribute("data-slide-tab") === tabName);
+		});
+
+		row.querySelectorAll("[data-slide-panel]").forEach((field) => {
+			field.hidden = field.getAttribute("data-slide-panel") !== tabName;
+		});
+
+		syncSlideRow(row);
+	}
+
+	function addSlideFromTemplate() {
+		const index = Date.now();
+		const html = slideTemplate.innerHTML.replace(/__INDEX__/g, String(index));
+		slidesContainer.insertAdjacentHTML("beforeend", html);
+		const row = slidesContainer.lastElementChild;
+		renumberSlides();
+		syncSlideRows();
+		return row;
+	}
+
+	function setField(row, suffix, value) {
+		const field = row ? row.querySelector('[name$="[' + suffix + ']"]') : null;
+		if (field) {
+			field.value = value;
+		}
+	}
+
+	function applyPreset(row, preset) {
+		if (!row) {
+			return;
+		}
+
+		if (preset === "product") {
+			setField(row, "title", "Product story");
+			setField(row, "subtitle", "New arrival");
+			setField(row, "button_text", "View product");
+			setField(row, "duration", "5");
+			setField(row, "action_type", "reaction");
+		} else if (preset === "poll") {
+			setField(row, "title", "Quick poll");
+			setField(row, "action_type", "poll");
+			setField(row, "action_payload", "Which one do you prefer?");
+			setField(row, "poll_options", "Option A\nOption B");
+		} else if (preset === "countdown") {
+			setField(row, "title", "Coming soon");
+			setField(row, "action_type", "countdown");
+			setField(row, "action_payload", "Launch starts in");
+		}
+
+		setActiveSlideTab(row, preset === "product" ? "cta" : "action");
+		syncSlideRow(row);
+	}
+
+	function validateSlideRow(row) {
+		const mediaType = row.querySelector('select[name$="[media_type]"]');
+		const imageInput = row.querySelector('input[name$="[image_id]"]');
+		const videoInput = row.querySelector('input[name$="[video_id]"]');
+		const actionType = row.querySelector('select[name$="[action_type]"]');
+		const pollOptions = row.querySelector('textarea[name$="[poll_options]"]');
+		const countdownInput = row.querySelector('input[name$="[countdown_datetime]"]');
+		const warnings = [];
+
+		if (mediaType && mediaType.value === "video" && videoInput && !videoInput.value) {
+			warnings.push(getLabel("missingVideo", "Video media is missing."));
+		}
+
+		if (mediaType && mediaType.value === "image" && imageInput && !imageInput.value) {
+			warnings.push(getLabel("missingImage", "Image media is missing."));
+		}
+
+		if (actionType && actionType.value === "poll") {
+			const options = pollOptions && pollOptions.value ? pollOptions.value.split(/\r?\n/).filter((option) => option.trim()) : [];
+			if (options.length < 2) {
+				warnings.push(getLabel("missingPollOptions", "Add at least two poll options."));
+			}
+		}
+
+		if (actionType && actionType.value === "countdown" && countdownInput && !countdownInput.value) {
+			warnings.push(getLabel("missingCountdown", "Countdown date is missing."));
+		}
+
+		let warningBox = row.querySelector("[data-slide-warnings]");
+		if (!warningBox) {
+			warningBox = document.createElement("div");
+			warningBox.className = "prime-stories-slide-warnings";
+			warningBox.setAttribute("data-slide-warnings", "");
+			row.appendChild(warningBox);
+		}
+
+		warningBox.hidden = warnings.length === 0;
+		warningBox.textContent = warnings.join(" ");
 	}
 
 	function syncSlideRows() {
@@ -278,7 +470,10 @@
 			return;
 		}
 
-		Array.from(slidesContainer.querySelectorAll("[data-slide-row]")).forEach(syncSlideRow);
+		Array.from(slidesContainer.querySelectorAll("[data-slide-row]")).forEach((row) => {
+			setActiveSlideTab(row, "media");
+			syncSlideRow(row);
+		});
 	}
 
 	document.addEventListener("input", function (event) {
