@@ -73,6 +73,9 @@ class Prime_Stories_REST_API {
 						'type'              => 'string',
 						'sanitize_callback' => 'sanitize_key',
 					),
+					'meta'       => array(
+						'type' => 'object',
+					),
 				),
 			)
 		);
@@ -156,7 +159,13 @@ class Prime_Stories_REST_API {
 		$event_type = sanitize_key( (string) $request->get_param( 'event_type' ) );
 		$session_id = sanitize_text_field( (string) $request->get_param( 'session_id' ) );
 		$source     = sanitize_key( (string) $request->get_param( 'source' ) );
+		$meta       = $request->get_param( 'meta' );
+		$event_value = '';
 		$user_id    = get_current_user_id();
+
+		if ( is_array( $meta ) && ! empty( $meta['reaction'] ) ) {
+			$event_value = sanitize_key( (string) $meta['reaction'] );
+		}
 
 		if ( ! $this->validate_story_id( $story_id ) ) {
 			prime_stories_log(
@@ -186,7 +195,7 @@ class Prime_Stories_REST_API {
 			return new WP_Error( 'prime_stories_invalid_event', __( 'Invalid analytics event.', 'prime-stories' ), array( 'status' => 400 ) );
 		}
 
-		$tracked = Prime_Stories_Analytics::get_instance()->track_event( $story_id, $event_type, $session_id, $user_id, $source );
+		$tracked = Prime_Stories_Analytics::get_instance()->track_event( $story_id, $event_type, $session_id, $user_id, $source, $event_value );
 
 		if ( ! $tracked ) {
 			prime_stories_log(
@@ -382,7 +391,7 @@ class Prime_Stories_REST_API {
 	 * @return bool
 	 */
 	public function validate_event_type( $event_type ) {
-		return in_array( sanitize_key( (string) $event_type ), array( 'impression', 'open', 'complete', 'click' ), true );
+		return in_array( sanitize_key( (string) $event_type ), array( 'impression', 'open', 'complete', 'click', 'reaction', 'reply' ), true );
 	}
 
 	/**

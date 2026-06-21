@@ -9,6 +9,9 @@
 	const sessionStorageKey = "primeStoriesSessionId";
 	const sessionCookieKey = "prime_stories_session_id";
 	const reportedIssues = new Set();
+	const doNotTrack =
+		config.respectDnt &&
+		(window.navigator.doNotTrack === "1" || window.navigator.msDoNotTrack === "1" || window.doNotTrack === "1");
 
 	function stringifyError(error) {
 		if (!error) {
@@ -135,7 +138,7 @@
 	}
 
 	function writeSessionCookie(sessionId) {
-		if (!sessionId || !config.enableGuestSeen) {
+		if (!sessionId || !config.enableGuestSeen || doNotTrack) {
 			return;
 		}
 
@@ -286,7 +289,7 @@
 			}
 
 			this.dialog.addEventListener("pointerdown", (event) => {
-				if (event.target.closest("[data-story-cta], [data-story-close], [data-story-next], [data-story-prev], [data-story-mute]")) {
+				if (event.target.closest("[data-story-cta], [data-story-action], [data-story-close], [data-story-next], [data-story-prev], [data-story-mute]")) {
 					return;
 				}
 
@@ -342,11 +345,41 @@
 			this.slides.forEach((slide) => {
 				const cta = slide.querySelector("[data-story-cta]");
 				const media = slide.querySelector("[data-story-clickable]");
+				const action = slide.querySelector("[data-story-action]");
 
 				if (cta) {
 					cta.addEventListener("click", () => {
 						this.trackEvent("click", Number(slide.getAttribute("data-story-id")));
 					});
+				}
+
+				if (action) {
+					action.addEventListener("click", (event) => {
+						const reaction = event.target.closest("[data-story-reaction]");
+						if (!reaction) {
+							return;
+						}
+
+						this.trackEvent("reaction", Number(slide.getAttribute("data-story-id")), {
+							reaction: reaction.getAttribute("data-story-reaction") || "",
+							slide: slide.getAttribute("data-slide-id") || "",
+						});
+					});
+
+					const reply = action.querySelector("[data-story-reply]");
+					if (reply) {
+						reply.addEventListener("keydown", (event) => {
+							if (event.key !== "Enter" || !reply.value.trim()) {
+								return;
+							}
+
+							event.preventDefault();
+							this.trackEvent("reply", Number(slide.getAttribute("data-story-id")), {
+								slide: slide.getAttribute("data-slide-id") || "",
+							});
+							reply.value = "";
+						});
+					}
 				}
 
 				if (media) {
@@ -472,8 +505,10 @@
 				slide.hidden = slideIndex !== index;
 			});
 
-			this.items.forEach((item, itemIndex) => {
-				item.classList.toggle("is-active", itemIndex === index);
+			this.items.forEach((item) => {
+				const start = Number(item.getAttribute("data-story-index")) || 0;
+				const count = Number(item.getAttribute("data-story-slide-count")) || 1;
+				item.classList.toggle("is-active", index >= start && index < start + count);
 			});
 
 			if (resetProgress) {
@@ -832,7 +867,7 @@
 		}
 
 		markSeen(storyId) {
-			if (!config.enableSeenState || !storyId) {
+			if (!config.enableSeenState || doNotTrack || !storyId) {
 				return;
 			}
 
@@ -858,7 +893,7 @@
 		}
 
 		trackImpression(storyId) {
-			if (!config.enableAnalytics || !storyId || this.sentImpressions.has(storyId)) {
+			if (!config.enableAnalytics || doNotTrack || !storyId || this.sentImpressions.has(storyId)) {
 				return;
 			}
 
@@ -866,8 +901,8 @@
 			this.trackEvent("impression", storyId);
 		}
 
-		trackEvent(eventType, storyId) {
-			if (!config.enableAnalytics || !storyId) {
+		trackEvent(eventType, storyId, meta) {
+			if (!config.enableAnalytics || doNotTrack || !storyId) {
 				return;
 			}
 
@@ -876,6 +911,7 @@
 				event_type: eventType,
 				session_id: this.sessionId,
 				source: this.instanceId || this.wrapper.getAttribute("data-layout") || "viewer",
+				meta: meta || {},
 			});
 		}
 	}

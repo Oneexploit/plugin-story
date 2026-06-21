@@ -59,6 +59,7 @@ $meta_keys = array(
 	'prime_stories_custom_css_class',
 	'prime_stories_open_on_click',
 	'prime_stories_fit_mode',
+	'prime_stories_slides',
 );
 
 foreach ( $meta_keys as $meta_key ) {

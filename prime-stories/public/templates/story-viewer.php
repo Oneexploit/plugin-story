@@ -25,7 +25,8 @@ defined( 'ABSPATH' ) || exit;
 				class="prime-stories-item <?php echo $is_seen ? 'prime-stories-item-seen' : 'prime-stories-item-unseen'; ?>"
 				data-story-trigger
 				data-story-id="<?php echo esc_attr( (string) $story['id'] ); ?>"
-				data-story-index="<?php echo esc_attr( (string) $index ); ?>"
+				data-story-index="<?php echo esc_attr( (string) ( $story['start_index'] ?? $index ) ); ?>"
+				data-story-slide-count="<?php echo esc_attr( (string) ( $story['slide_count'] ?? 1 ) ); ?>"
 				role="listitem"
 				aria-label="<?php echo esc_attr( sprintf( __( 'Open story %s', 'prime-stories' ), $story['title'] ) ); ?>"
 			>
@@ -42,8 +43,8 @@ defined( 'ABSPATH' ) || exit;
 	<div class="prime-stories-viewer" hidden aria-hidden="true">
 		<div class="prime-stories-dialog" role="dialog" aria-modal="true" aria-label="<?php esc_attr_e( 'Story viewer', 'prime-stories' ); ?>" tabindex="-1">
 			<div class="prime-stories-progress">
-				<?php foreach ( $stories as $story ) : ?>
-					<span class="prime-stories-progress-track" data-story-progress="<?php echo esc_attr( (string) $story['id'] ); ?>">
+				<?php foreach ( $flat_slides as $slide ) : ?>
+					<span class="prime-stories-progress-track" data-story-progress="<?php echo esc_attr( (string) $slide['id'] ); ?>">
 						<span class="prime-stories-progress-bar"></span>
 					</span>
 				<?php endforeach; ?>
@@ -59,11 +60,12 @@ defined( 'ABSPATH' ) || exit;
 			</div>
 
 			<div class="prime-stories-slides">
-				<?php foreach ( $stories as $index => $story ) : ?>
+				<?php foreach ( $flat_slides as $index => $story ) : ?>
 					<article
 						class="prime-stories-slide <?php echo ! empty( $story['custom_css_class'] ) ? esc_attr( prime_stories_sanitize_class_list( $story['custom_css_class'] ) ) : ''; ?>"
 						data-story-slide
-						data-story-id="<?php echo esc_attr( (string) $story['id'] ); ?>"
+						data-story-id="<?php echo esc_attr( (string) $story['parent_story_id'] ); ?>"
+						data-slide-id="<?php echo esc_attr( (string) $story['id'] ); ?>"
 						data-story-index="<?php echo esc_attr( (string) $index ); ?>"
 						data-media-type="<?php echo esc_attr( $story['media_type'] ); ?>"
 						data-duration="<?php echo esc_attr( (string) $story['duration'] ); ?>"
@@ -73,6 +75,10 @@ defined( 'ABSPATH' ) || exit;
 						data-fit-mode="<?php echo esc_attr( 'global' === $story['fit_mode'] ? $args['fit_mode'] : $story['fit_mode'] ); ?>"
 						hidden
 					>
+						<div class="prime-stories-slide-header">
+							<img src="<?php echo esc_url( $story['parent_preview'] ); ?>" alt="" />
+							<span><?php echo esc_html( $story['parent_story_title'] ); ?></span>
+						</div>
 						<div class="prime-stories-slide-media" data-story-clickable>
 							<?php if ( 'video' === $story['media_type'] ) : ?>
 								<video
@@ -119,6 +125,27 @@ defined( 'ABSPATH' ) || exit;
 								>
 									<?php echo esc_html( $story['button_text'] ); ?>
 								</a>
+							<?php endif; ?>
+
+							<?php if ( ! empty( $story['action_type'] ) && 'none' !== $story['action_type'] ) : ?>
+								<div class="prime-stories-action prime-stories-action-<?php echo esc_attr( $story['action_type'] ); ?>" data-story-action="<?php echo esc_attr( $story['action_type'] ); ?>">
+									<?php if ( 'reaction' === $story['action_type'] ) : ?>
+										<button type="button" data-story-reaction="like">Like</button>
+										<button type="button" data-story-reaction="love">Love</button>
+										<button type="button" data-story-reaction="wow">Wow</button>
+									<?php elseif ( 'poll' === $story['action_type'] ) : ?>
+										<p><?php echo esc_html( $story['action_payload'] ? $story['action_payload'] : __( 'What do you think?', 'prime-stories' ) ); ?></p>
+										<button type="button" data-story-reaction="poll_yes"><?php esc_html_e( 'Yes', 'prime-stories' ); ?></button>
+										<button type="button" data-story-reaction="poll_no"><?php esc_html_e( 'No', 'prime-stories' ); ?></button>
+									<?php elseif ( 'question' === $story['action_type'] ) : ?>
+										<label>
+											<span><?php echo esc_html( $story['action_payload'] ? $story['action_payload'] : __( 'Send a reply', 'prime-stories' ) ); ?></span>
+											<input type="text" data-story-reply maxlength="160">
+										</label>
+									<?php elseif ( 'countdown' === $story['action_type'] ) : ?>
+										<p data-story-countdown="<?php echo esc_attr( $story['action_payload'] ); ?>"><?php echo esc_html( $story['action_payload'] ); ?></p>
+									<?php endif; ?>
+								</div>
 							<?php endif; ?>
 						</div>
 					</article>

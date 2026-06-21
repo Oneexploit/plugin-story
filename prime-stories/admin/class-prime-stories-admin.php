@@ -443,6 +443,13 @@ class Prime_Stories_Admin {
 				'min'     => 1,
 				'max'     => 365,
 			),
+			'respect_do_not_track' => array(
+				'label'       => __( 'Respect Do Not Track', 'prime-stories' ),
+				'type'        => 'toggle',
+				'section'     => 'advanced',
+				'default'     => 'yes',
+				'description' => __( 'Disable frontend analytics and guest seen-state when the browser sends a Do Not Track signal.', 'prime-stories' ),
+			),
 			'enable_debug_logging' => array(
 				'label'       => __( 'Enable diagnostic logging', 'prime-stories' ),
 				'type'        => 'toggle',

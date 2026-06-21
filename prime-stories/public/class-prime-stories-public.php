@@ -115,6 +115,7 @@ class Prime_Stories_Public {
 		$inline_style    = $this->get_wrapper_style( $args, $settings );
 		$guest_session_id = isset( $_COOKIE['prime_stories_session_id'] ) ? prime_stories_sanitize_session_id( wp_unslash( (string) $_COOKIE['prime_stories_session_id'] ) ) : '';
 		$seen_story_ids   = is_user_logged_in() ? prime_stories_get_seen_story_ids( get_current_user_id() ) : prime_stories_get_guest_seen_story_ids( $guest_session_id );
+		$flat_slides      = $this->get_flat_slides( $stories );
 
 		ob_start();
 		include PRIME_STORIES_DIR . 'public/templates/story-viewer.php';
@@ -156,6 +157,34 @@ class Prime_Stories_Public {
 		}
 
 		return implode( ' ', array_unique( array_filter( $classes ) ) );
+	}
+
+	/**
+	 * Flatten bubble slides for the viewer while preserving bubble context.
+	 *
+	 * @param array<int, array<string, mixed>> $stories Story payloads.
+	 * @return array<int, array<string, mixed>>
+	 */
+	private function get_flat_slides( &$stories ) {
+		$flat_slides = array();
+
+		foreach ( $stories as &$story ) {
+			$story['start_index'] = count( $flat_slides );
+			$slides               = ! empty( $story['slides'] ) && is_array( $story['slides'] ) ? $story['slides'] : array( $story );
+
+			foreach ( $slides as $slide ) {
+				$slide['parent_story_id']    = (int) $story['id'];
+				$slide['parent_story_title'] = (string) $story['title'];
+				$slide['parent_preview']     = (string) $story['preview_image'];
+				$slide['global_index']       = count( $flat_slides );
+				$flat_slides[]               = $slide;
+			}
+
+			$story['slide_count'] = max( 1, count( $slides ) );
+		}
+		unset( $story );
+
+		return $flat_slides;
 	}
 
 	/**

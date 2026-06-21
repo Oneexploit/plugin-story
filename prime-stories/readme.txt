@@ -3,7 +3,7 @@ Contributors: webiitor
 Tags: stories, elementor, shortcode, video stories, image stories
 Requires at least: 6.4
 Requires PHP: 8.0
-Stable tag: 1.1.0
+Stable tag: 1.2.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -56,6 +56,11 @@ Use the shortcode:
 `[prime_stories group="homepage" layout="circle" limit="10" autoplay="true"]`
 
 == Changelog ==
+
+= 1.2.0 =
+
+* Added a multi-slide story model so one story bubble can contain multiple story segments with legacy fallback.
+* Added an admin slide editor, story actions for reactions/polls/questions/countdowns, improved viewer bubble context, and Do Not Track support.
 
 = 1.1.0 =
 

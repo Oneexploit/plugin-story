@@ -149,6 +149,7 @@ class Prime_Stories_Assets {
 					'guestSeenDays'   => max( 1, absint( prime_stories_get_setting( 'guest_seen_retention_days', 30 ) ) ),
 					'enableLogging'   => prime_stories_is_enabled( prime_stories_get_setting( 'enable_debug_logging', 'yes' ) ),
 					'enableClientLog' => prime_stories_is_enabled( prime_stories_get_setting( 'enable_client_logging', 'yes' ) ),
+					'respectDnt'      => prime_stories_is_enabled( prime_stories_get_setting( 'respect_do_not_track', 'yes' ) ),
 					'i18n'            => array(
 						'close'  => __( 'Close story viewer', 'prime-stories' ),
 						'mute'   => __( 'Mute video', 'prime-stories' ),

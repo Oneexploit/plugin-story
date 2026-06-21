@@ -15,7 +15,7 @@ class Prime_Stories_Analytics {
 	/**
 	 * Current schema version.
 	 */
-	private const DB_VERSION = '1.1.0';
+	private const DB_VERSION = '1.2.0';
 
 	/**
 	 * Singleton instance.
@@ -81,6 +81,7 @@ class Prime_Stories_Analytics {
 			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
 			story_id BIGINT UNSIGNED NOT NULL,
 			event_type VARCHAR(50) NOT NULL,
+			event_value VARCHAR(100) NULL,
 			user_id BIGINT UNSIGNED NULL,
 			session_id VARCHAR(191) NULL,
 			source VARCHAR(100) NULL,
@@ -90,6 +91,7 @@ class Prime_Stories_Analytics {
 			KEY story_id (story_id),
 			KEY story_event (story_id, event_type),
 			KEY event_type (event_type),
+			KEY event_value (event_value),
 			KEY session_id (session_id),
 			KEY source (source),
 			KEY device_type (device_type),
@@ -162,7 +164,7 @@ class Prime_Stories_Analytics {
 	 * @param int    $user_id User ID.
 	 * @return bool
 	 */
-	public function track_event( $story_id, $event_type, $session_id = '', $user_id = 0, $source = '' ) {
+	public function track_event( $story_id, $event_type, $session_id = '', $user_id = 0, $source = '', $event_value = '' ) {
 		global $wpdb;
 
 		if ( ! prime_stories_is_enabled( prime_stories_get_setting( 'enable_analytics', 'yes' ) ) ) {
@@ -179,8 +181,9 @@ class Prime_Stories_Analytics {
 		$user_id    = absint( $user_id );
 		$session_id = prime_stories_sanitize_session_id( $session_id );
 		$source     = sanitize_key( (string) $source );
+		$event_value = sanitize_key( (string) $event_value );
 
-		if ( 'prime_story' !== get_post_type( $story_id ) || 'publish' !== get_post_status( $story_id ) || ! in_array( $event_type, array( 'impression', 'open', 'complete', 'click' ), true ) ) {
+		if ( 'prime_story' !== get_post_type( $story_id ) || 'publish' !== get_post_status( $story_id ) || ! in_array( $event_type, array( 'impression', 'open', 'complete', 'click', 'reaction', 'reply' ), true ) ) {
 			prime_stories_log( 'warning', 'Analytics event rejected because the story or event type was invalid.', array( 'story_id' => $story_id, 'event_type' => $event_type ), 'analytics.track_event' );
 			return false;
 		}
@@ -196,6 +199,7 @@ class Prime_Stories_Analytics {
 		$data = array(
 			'story_id'    => $story_id,
 			'event_type'  => $event_type,
+			'event_value' => $event_value ? substr( $event_value, 0, 100 ) : null,
 			'user_id'     => $user_id ? $user_id : null,
 			'session_id'  => $session_id ? $session_id : null,
 			'source'      => $source ? substr( $source, 0, 100 ) : null,
@@ -203,7 +207,7 @@ class Prime_Stories_Analytics {
 			'created_at'  => current_time( 'mysql' ),
 		);
 
-		$format = array( '%d', '%s', '%d', '%s', '%s', '%s', '%s' );
+		$format = array( '%d', '%s', '%s', '%d', '%s', '%s', '%s', '%s' );
 
 		$inserted = $wpdb->insert( $this->get_table_name(), $data, $format );
 
@@ -237,6 +241,8 @@ class Prime_Stories_Analytics {
 				'open'            => 0,
 				'complete'        => 0,
 				'click'           => 0,
+				'reaction'        => 0,
+				'reply'           => 0,
 				'unique_sessions' => 0,
 				'ctr'             => 0,
 				'completion_rate' => 0,
@@ -255,6 +261,8 @@ class Prime_Stories_Analytics {
 			'open'            => 0,
 			'complete'        => 0,
 			'click'           => 0,
+			'reaction'        => 0,
+			'reply'           => 0,
 			'unique_sessions' => 0,
 			'ctr'             => 0,
 			'completion_rate' => 0,
@@ -306,6 +314,8 @@ class Prime_Stories_Analytics {
 				SUM(CASE WHEN event_type = 'open' THEN 1 ELSE 0 END) AS open_count,
 				SUM(CASE WHEN event_type = 'complete' THEN 1 ELSE 0 END) AS complete_count,
 				SUM(CASE WHEN event_type = 'click' THEN 1 ELSE 0 END) AS click_count,
+				SUM(CASE WHEN event_type = 'reaction' THEN 1 ELSE 0 END) AS reaction_count,
+				SUM(CASE WHEN event_type = 'reply' THEN 1 ELSE 0 END) AS reply_count,
 				COUNT(DISTINCT session_id) AS unique_sessions
 			FROM {$table}
 			GROUP BY story_id

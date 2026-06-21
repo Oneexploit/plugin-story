@@ -33,6 +33,7 @@ function prime_stories_get_default_settings() {
 		'lazy_load_media'          => 'yes',
 		'analytics_retention_days' => 180,
 		'guest_seen_retention_days'=> 30,
+		'respect_do_not_track'     => 'yes',
 		'enable_debug_logging'     => 'yes',
 		'enable_client_logging'    => 'yes',
 		'custom_css'               => '',
@@ -201,6 +202,34 @@ function prime_stories_get_default_story_meta() {
 		'custom_css_class' => '',
 		'open_on_click'    => 'no',
 		'fit_mode'         => 'global',
+		'slides'           => array(),
+	);
+}
+
+/**
+ * Get default values for one story slide.
+ *
+ * @return array<string, mixed>
+ */
+function prime_stories_get_default_slide_meta() {
+	return array(
+		'id'              => '',
+		'media_type'      => 'image',
+		'image_id'        => 0,
+		'video_id'        => 0,
+		'mobile_media_id' => 0,
+		'cover_image_id'  => 0,
+		'title'           => '',
+		'subtitle'        => '',
+		'caption'         => '',
+		'button_text'     => '',
+		'button_url'      => '',
+		'button_target'   => 'same_tab',
+		'open_on_click'   => 'no',
+		'duration'        => (int) prime_stories_get_setting( 'default_duration', 5 ),
+		'fit_mode'        => 'global',
+		'action_type'     => 'none',
+		'action_payload'  => '',
 	);
 }
 
@@ -251,8 +280,85 @@ function prime_stories_get_story_meta( $post_id ) {
 	$meta['duration']        = max( 1, min( 60, absint( $meta['duration'] ) ) );
 	$meta['priority']        = (int) $meta['priority'];
 	$meta['fit_mode']        = prime_stories_sanitize_select( (string) $meta['fit_mode'], array( 'global', 'cover', 'contain' ), 'global' );
+	$meta['slides']          = prime_stories_normalize_slides( $meta['slides'], $post_id, $meta );
 
 	return $meta;
+}
+
+/**
+ * Normalize stored slide rows with a legacy single-slide fallback.
+ *
+ * @param mixed                $slides Stored slides.
+ * @param int                  $post_id Story post ID.
+ * @param array<string, mixed> $legacy_meta Legacy story-level meta.
+ * @return array<int, array<string, mixed>>
+ */
+function prime_stories_normalize_slides( $slides, $post_id = 0, $legacy_meta = array() ) {
+	$normalized = array();
+	$defaults   = prime_stories_get_default_slide_meta();
+
+	if ( is_string( $slides ) ) {
+		$decoded = json_decode( $slides, true );
+		$slides  = is_array( $decoded ) ? $decoded : array();
+	}
+
+	if ( is_array( $slides ) ) {
+		foreach ( $slides as $index => $slide ) {
+			if ( ! is_array( $slide ) ) {
+				continue;
+			}
+
+			$slide = wp_parse_args( $slide, $defaults );
+			$slide['id']              = sanitize_key( (string) ( $slide['id'] ? $slide['id'] : 'slide-' . ( $index + 1 ) ) );
+			$slide['media_type']      = prime_stories_sanitize_select( (string) $slide['media_type'], array( 'image', 'video' ), 'image' );
+			$slide['image_id']        = absint( $slide['image_id'] );
+			$slide['video_id']        = absint( $slide['video_id'] );
+			$slide['mobile_media_id'] = absint( $slide['mobile_media_id'] );
+			$slide['cover_image_id']  = absint( $slide['cover_image_id'] );
+			$slide['title']           = sanitize_text_field( (string) $slide['title'] );
+			$slide['subtitle']        = sanitize_text_field( (string) $slide['subtitle'] );
+			$slide['caption']         = wp_kses_post( (string) $slide['caption'] );
+			$slide['button_text']     = sanitize_text_field( (string) $slide['button_text'] );
+			$slide['button_url']      = esc_url_raw( (string) $slide['button_url'] );
+			$slide['button_target']   = prime_stories_sanitize_select( (string) $slide['button_target'], array( 'same_tab', 'new_tab' ), 'same_tab' );
+			$slide['open_on_click']   = prime_stories_sanitize_select( (string) $slide['open_on_click'], array( 'yes', 'no' ), 'no' );
+			$slide['duration']        = max( 1, min( 60, absint( $slide['duration'] ) ) );
+			$slide['fit_mode']        = prime_stories_sanitize_select( (string) $slide['fit_mode'], array( 'global', 'cover', 'contain' ), 'global' );
+			$slide['action_type']     = prime_stories_sanitize_select( (string) $slide['action_type'], array( 'none', 'reaction', 'poll', 'question', 'countdown' ), 'none' );
+			$slide['action_payload']  = sanitize_textarea_field( (string) $slide['action_payload'] );
+
+			if ( $slide['image_id'] || $slide['video_id'] || $slide['mobile_media_id'] || $slide['cover_image_id'] || $slide['caption'] || $slide['button_url'] ) {
+				$normalized[] = $slide;
+			}
+		}
+	}
+
+	if ( empty( $normalized ) && ! empty( $legacy_meta ) ) {
+		$legacy = wp_parse_args(
+			array(
+				'id'              => 'legacy-' . absint( $post_id ),
+				'media_type'      => $legacy_meta['media_type'] ?? 'image',
+				'image_id'        => $legacy_meta['image_id'] ?? 0,
+				'video_id'        => $legacy_meta['video_id'] ?? 0,
+				'mobile_media_id' => $legacy_meta['mobile_media_id'] ?? 0,
+				'cover_image_id'  => $legacy_meta['cover_image_id'] ?? 0,
+				'title'           => get_the_title( $post_id ),
+				'subtitle'        => $legacy_meta['subtitle'] ?? '',
+				'caption'         => $legacy_meta['caption'] ?? '',
+				'button_text'     => $legacy_meta['button_text'] ?? '',
+				'button_url'      => $legacy_meta['button_url'] ?? '',
+				'button_target'   => $legacy_meta['button_target'] ?? 'same_tab',
+				'open_on_click'   => $legacy_meta['open_on_click'] ?? 'no',
+				'duration'        => $legacy_meta['duration'] ?? prime_stories_get_setting( 'default_duration', 5 ),
+				'fit_mode'        => $legacy_meta['fit_mode'] ?? 'global',
+			),
+			$defaults
+		);
+
+		$normalized[] = $legacy;
+	}
+
+	return $normalized;
 }
 
 /**
@@ -380,19 +486,13 @@ function prime_stories_is_story_visible( $post_id ) {
  */
 function prime_stories_get_story_payload( $post_id ) {
 	$meta          = prime_stories_get_story_meta( $post_id );
-	$image_url     = $meta['image_id'] ? wp_get_attachment_url( $meta['image_id'] ) : '';
-	$video_url     = $meta['video_id'] ? wp_get_attachment_url( $meta['video_id'] ) : '';
-	$mobile_url    = $meta['mobile_media_id'] ? wp_get_attachment_url( $meta['mobile_media_id'] ) : '';
-	$cover_url     = $meta['cover_image_id'] ? wp_get_attachment_image_url( $meta['cover_image_id'], 'medium' ) : '';
-	$preview_image = $cover_url ? $cover_url : ( 'image' === $meta['media_type'] ? $image_url : wp_get_attachment_image_url( get_post_thumbnail_id( $post_id ), 'medium' ) );
-
-	if ( empty( $preview_image ) ) {
-		$preview_image = prime_stories_get_logo_raster_url();
-	}
-
-	if ( 'image' === $meta['media_type'] && empty( $image_url ) ) {
-		$image_url = $mobile_url ? $mobile_url : $preview_image;
-	}
+	$slides        = prime_stories_prepare_slide_payloads( $post_id, $meta['slides'] );
+	$first_slide   = ! empty( $slides[0] ) ? $slides[0] : array();
+	$image_url     = $first_slide['image_url'] ?? '';
+	$video_url     = $first_slide['video_url'] ?? '';
+	$mobile_url    = $first_slide['mobile_media_url'] ?? '';
+	$cover_url     = $meta['cover_image_id'] ? wp_get_attachment_image_url( $meta['cover_image_id'], 'medium' ) : ( $first_slide['cover_image_url'] ?? '' );
+	$preview_image = $cover_url ? $cover_url : ( $first_slide['preview_image'] ?? prime_stories_get_logo_raster_url() );
 
 	$groups = wp_get_post_terms( $post_id, 'prime_story_group', array( 'fields' => 'slugs' ) );
 
@@ -419,8 +519,62 @@ function prime_stories_get_story_payload( $post_id ) {
 		'custom_css_class' => prime_stories_sanitize_class_list( $meta['custom_css_class'] ),
 		'open_on_click'    => 'yes' === $meta['open_on_click'],
 		'fit_mode'         => $meta['fit_mode'],
+		'slides'           => $slides,
 		'groups'           => $groups,
 	);
+}
+
+/**
+ * Prepare all slide payloads for a story bubble.
+ *
+ * @param int                         $post_id Story post ID.
+ * @param array<int, array<string,mixed>> $slides Normalized slides.
+ * @return array<int, array<string, mixed>>
+ */
+function prime_stories_prepare_slide_payloads( $post_id, $slides ) {
+	$payloads = array();
+
+	foreach ( $slides as $index => $slide ) {
+		$image_url     = ! empty( $slide['image_id'] ) ? wp_get_attachment_url( $slide['image_id'] ) : '';
+		$video_url     = ! empty( $slide['video_id'] ) ? wp_get_attachment_url( $slide['video_id'] ) : '';
+		$mobile_url    = ! empty( $slide['mobile_media_id'] ) ? wp_get_attachment_url( $slide['mobile_media_id'] ) : '';
+		$cover_url     = ! empty( $slide['cover_image_id'] ) ? wp_get_attachment_image_url( $slide['cover_image_id'], 'medium' ) : '';
+		$preview_image = $cover_url ? $cover_url : ( 'image' === $slide['media_type'] ? $image_url : wp_get_attachment_image_url( get_post_thumbnail_id( $post_id ), 'medium' ) );
+
+		if ( empty( $preview_image ) ) {
+			$preview_image = prime_stories_get_logo_raster_url();
+		}
+
+		if ( 'image' === $slide['media_type'] && empty( $image_url ) ) {
+			$image_url = $mobile_url ? $mobile_url : $preview_image;
+		}
+
+		$payloads[] = array(
+			'id'               => absint( $post_id ) . '-' . sanitize_key( (string) $slide['id'] ),
+			'story_id'         => absint( $post_id ),
+			'slide_id'         => sanitize_key( (string) $slide['id'] ),
+			'slide_index'      => $index,
+			'title'            => $slide['title'] ? $slide['title'] : get_the_title( $post_id ),
+			'media_type'       => $slide['media_type'],
+			'image_url'        => $image_url,
+			'video_url'        => $video_url,
+			'mobile_media_url' => $mobile_url,
+			'cover_image_url'  => $cover_url,
+			'preview_image'    => $preview_image,
+			'caption'          => $slide['caption'],
+			'subtitle'         => $slide['subtitle'],
+			'button_text'      => $slide['button_text'],
+			'button_url'       => $slide['button_url'],
+			'button_target'    => $slide['button_target'],
+			'duration'         => (int) $slide['duration'],
+			'fit_mode'         => $slide['fit_mode'],
+			'open_on_click'    => 'yes' === $slide['open_on_click'],
+			'action_type'      => $slide['action_type'],
+			'action_payload'   => $slide['action_payload'],
+		);
+	}
+
+	return $payloads;
 }
 
 /**

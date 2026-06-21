@@ -79,6 +79,42 @@
 	margin-bottom: 16px;
 }
 
+.prime-stories-admin-card-heading {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	margin-bottom: 16px;
+}
+
+.prime-stories-admin-card-heading h3 {
+	margin: 0;
+}
+
+.prime-stories-slides-editor {
+	margin-bottom: 18px;
+}
+
+.prime-stories-slide-row {
+	margin-bottom: 16px;
+	padding: 16px;
+	border: 1px solid #d9dfe8;
+	border-radius: 12px;
+	background: #f8fafc;
+}
+
+.prime-stories-slide-row:last-child {
+	margin-bottom: 0;
+}
+
+.prime-stories-slide-row-head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	margin-bottom: 14px;
+}
+
 .prime-stories-admin-field {
 	display: flex;
 	flex-direction: column;

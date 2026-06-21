@@ -33,6 +33,14 @@ defined( 'ABSPATH' ) || exit;
 			<strong><?php echo esc_html( number_format_i18n( (int) $summary['click'] ) ); ?></strong>
 		</div>
 		<div class="prime-stories-stat-card">
+			<span><?php esc_html_e( 'Reactions', 'prime-stories' ); ?></span>
+			<strong><?php echo esc_html( number_format_i18n( (int) $summary['reaction'] ) ); ?></strong>
+		</div>
+		<div class="prime-stories-stat-card">
+			<span><?php esc_html_e( 'Replies', 'prime-stories' ); ?></span>
+			<strong><?php echo esc_html( number_format_i18n( (int) $summary['reply'] ) ); ?></strong>
+		</div>
+		<div class="prime-stories-stat-card">
 			<span><?php esc_html_e( 'Unique Sessions', 'prime-stories' ); ?></span>
 			<strong><?php echo esc_html( number_format_i18n( (int) $summary['unique_sessions'] ) ); ?></strong>
 		</div>
@@ -55,13 +63,15 @@ defined( 'ABSPATH' ) || exit;
 				<th><?php esc_html_e( 'Opens', 'prime-stories' ); ?></th>
 				<th><?php esc_html_e( 'Completions', 'prime-stories' ); ?></th>
 				<th><?php esc_html_e( 'Clicks', 'prime-stories' ); ?></th>
+				<th><?php esc_html_e( 'Reactions', 'prime-stories' ); ?></th>
+				<th><?php esc_html_e( 'Replies', 'prime-stories' ); ?></th>
 				<th><?php esc_html_e( 'Unique Sessions', 'prime-stories' ); ?></th>
 			</tr>
 		</thead>
 		<tbody>
 			<?php if ( empty( $top_stories ) ) : ?>
 				<tr>
-					<td colspan="6"><?php esc_html_e( 'No analytics data yet.', 'prime-stories' ); ?></td>
+					<td colspan="8"><?php esc_html_e( 'No analytics data yet.', 'prime-stories' ); ?></td>
 				</tr>
 			<?php else : ?>
 				<?php foreach ( $top_stories as $story ) : ?>
@@ -75,6 +85,8 @@ defined( 'ABSPATH' ) || exit;
 						<td><?php echo esc_html( number_format_i18n( (int) $story['open_count'] ) ); ?></td>
 						<td><?php echo esc_html( number_format_i18n( (int) $story['complete_count'] ) ); ?></td>
 						<td><?php echo esc_html( number_format_i18n( (int) $story['click_count'] ) ); ?></td>
+						<td><?php echo esc_html( number_format_i18n( (int) $story['reaction_count'] ) ); ?></td>
+						<td><?php echo esc_html( number_format_i18n( (int) $story['reply_count'] ) ); ?></td>
 						<td><?php echo esc_html( number_format_i18n( (int) $story['unique_sessions'] ) ); ?></td>
 					</tr>
 				<?php endforeach; ?>

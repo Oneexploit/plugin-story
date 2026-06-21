@@ -118,6 +118,17 @@
 				row.remove();
 			}
 		}
+
+		const removeSlideButton = event.target.closest(".prime-stories-remove-slide");
+		if (removeSlideButton) {
+			event.preventDefault();
+			const row = removeSlideButton.closest("[data-slide-row]");
+			const rows = document.querySelectorAll("[data-slide-row]");
+			if (row && rows.length > 1) {
+				row.remove();
+				renumberSlides();
+			}
+		}
 	});
 
 	const addRuleButton = document.getElementById("prime-stories-add-rule");
@@ -134,6 +145,32 @@
 
 			const html = template.innerHTML.replace(/__INDEX__/g, String(index)).replace(/__ID__/g, id);
 			rulesContainer.insertAdjacentHTML("beforeend", html);
+		});
+	}
+
+	const addSlideButton = document.getElementById("prime-stories-add-slide");
+	const slidesContainer = document.getElementById("prime-stories-slide-rows");
+	const slideTemplate = document.getElementById("tmpl-prime-stories-slide-row");
+
+	function renumberSlides() {
+		if (!slidesContainer) {
+			return;
+		}
+
+		Array.from(slidesContainer.querySelectorAll("[data-slide-row]")).forEach((row, index) => {
+			const number = row.querySelector("[data-slide-number]");
+			if (number) {
+				number.textContent = String(index + 1);
+			}
+		});
+	}
+
+	if (addSlideButton && slidesContainer && slideTemplate) {
+		addSlideButton.addEventListener("click", function () {
+			const index = Date.now();
+			const html = slideTemplate.innerHTML.replace(/__INDEX__/g, String(index));
+			slidesContainer.insertAdjacentHTML("beforeend", html);
+			renumberSlides();
 		});
 	}
 
