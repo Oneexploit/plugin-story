@@ -52,10 +52,10 @@ defined( 'ABSPATH' ) || exit;
 
 			<div class="prime-stories-toolbar">
 				<button type="button" class="prime-stories-icon-button prime-stories-mute-button" data-story-mute hidden aria-label="<?php esc_attr_e( 'Toggle video sound', 'prime-stories' ); ?>">
-					<?php esc_html_e( 'Mute', 'prime-stories' ); ?>
+					<span class="prime-stories-mute-glyph" aria-hidden="true"></span>
 				</button>
 				<button type="button" class="prime-stories-icon-button prime-stories-close-button" data-story-close aria-label="<?php esc_attr_e( 'Close story viewer', 'prime-stories' ); ?>">
-					<?php esc_html_e( 'Close', 'prime-stories' ); ?>
+					<span aria-hidden="true">&times;</span>
 				</button>
 			</div>
 
@@ -130,9 +130,9 @@ defined( 'ABSPATH' ) || exit;
 							<?php if ( ! empty( $story['action_type'] ) && 'none' !== $story['action_type'] ) : ?>
 								<div class="prime-stories-action prime-stories-action-<?php echo esc_attr( $story['action_type'] ); ?>" data-story-action="<?php echo esc_attr( $story['action_type'] ); ?>">
 									<?php if ( 'reaction' === $story['action_type'] ) : ?>
-										<button type="button" data-story-reaction="like">Like</button>
-										<button type="button" data-story-reaction="love">Love</button>
-										<button type="button" data-story-reaction="wow">Wow</button>
+										<button type="button" data-story-reaction="like"><?php esc_html_e( 'Like', 'prime-stories' ); ?></button>
+										<button type="button" data-story-reaction="love"><?php esc_html_e( 'Love', 'prime-stories' ); ?></button>
+										<button type="button" data-story-reaction="wow"><?php esc_html_e( 'Wow', 'prime-stories' ); ?></button>
 									<?php elseif ( 'poll' === $story['action_type'] ) : ?>
 										<p><?php echo esc_html( $story['action_payload'] ? $story['action_payload'] : __( 'What do you think?', 'prime-stories' ) ); ?></p>
 										<button type="button" data-story-reaction="poll_yes"><?php esc_html_e( 'Yes', 'prime-stories' ); ?></button>
@@ -142,6 +142,7 @@ defined( 'ABSPATH' ) || exit;
 											<span><?php echo esc_html( $story['action_payload'] ? $story['action_payload'] : __( 'Send a reply', 'prime-stories' ) ); ?></span>
 											<input type="text" data-story-reply maxlength="160">
 										</label>
+										<button type="button" data-story-reply-submit><?php esc_html_e( 'Send', 'prime-stories' ); ?></button>
 									<?php elseif ( 'countdown' === $story['action_type'] ) : ?>
 										<p data-story-countdown="<?php echo esc_attr( $story['action_payload'] ); ?>"><?php echo esc_html( $story['action_payload'] ); ?></p>
 									<?php endif; ?>

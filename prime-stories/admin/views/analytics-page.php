@@ -93,4 +93,70 @@ defined( 'ABSPATH' ) || exit;
 			<?php endif; ?>
 		</tbody>
 	</table>
+
+	<h2><?php esc_html_e( 'Story Interactions', 'prime-stories' ); ?></h2>
+	<table class="widefat striped">
+		<thead>
+			<tr>
+				<th><?php esc_html_e( 'Story', 'prime-stories' ); ?></th>
+				<th><?php esc_html_e( 'Slide', 'prime-stories' ); ?></th>
+				<th><?php esc_html_e( 'Type', 'prime-stories' ); ?></th>
+				<th><?php esc_html_e( 'Value', 'prime-stories' ); ?></th>
+				<th><?php esc_html_e( 'Total', 'prime-stories' ); ?></th>
+			</tr>
+		</thead>
+		<tbody>
+			<?php if ( empty( $interactions ) ) : ?>
+				<tr>
+					<td colspan="5"><?php esc_html_e( 'No reactions, poll votes, or replies yet.', 'prime-stories' ); ?></td>
+				</tr>
+			<?php else : ?>
+				<?php foreach ( $interactions as $interaction ) : ?>
+					<tr>
+						<td>
+							<a href="<?php echo esc_url( get_edit_post_link( (int) $interaction['story_id'] ) ?: '' ); ?>">
+								<?php echo esc_html( $interaction['title'] ); ?>
+							</a>
+						</td>
+						<td><code><?php echo esc_html( (string) $interaction['slide_id'] ); ?></code></td>
+						<td><?php echo esc_html( ucfirst( (string) $interaction['event_type'] ) ); ?></td>
+						<td><?php echo esc_html( str_replace( '_', ' ', (string) $interaction['event_value'] ) ); ?></td>
+						<td><?php echo esc_html( number_format_i18n( (int) $interaction['total'] ) ); ?></td>
+					</tr>
+				<?php endforeach; ?>
+			<?php endif; ?>
+		</tbody>
+	</table>
+
+	<h2><?php esc_html_e( 'Reply Inbox', 'prime-stories' ); ?></h2>
+	<table class="widefat striped">
+		<thead>
+			<tr>
+				<th><?php esc_html_e( 'Story', 'prime-stories' ); ?></th>
+				<th><?php esc_html_e( 'Slide', 'prime-stories' ); ?></th>
+				<th><?php esc_html_e( 'Reply', 'prime-stories' ); ?></th>
+				<th><?php esc_html_e( 'Created', 'prime-stories' ); ?></th>
+			</tr>
+		</thead>
+		<tbody>
+			<?php if ( empty( $recent_replies ) ) : ?>
+				<tr>
+					<td colspan="4"><?php esc_html_e( 'No text replies yet.', 'prime-stories' ); ?></td>
+				</tr>
+			<?php else : ?>
+				<?php foreach ( $recent_replies as $reply ) : ?>
+					<tr>
+						<td>
+							<a href="<?php echo esc_url( get_edit_post_link( (int) $reply['story_id'] ) ?: '' ); ?>">
+								<?php echo esc_html( $reply['title'] ); ?>
+							</a>
+						</td>
+						<td><code><?php echo esc_html( (string) $reply['slide_id'] ); ?></code></td>
+						<td><?php echo esc_html( (string) $reply['action_payload'] ); ?></td>
+						<td><?php echo esc_html( mysql2date( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), (string) $reply['created_at'] ) ); ?></td>
+					</tr>
+				<?php endforeach; ?>
+			<?php endif; ?>
+		</tbody>
+	</table>
 </div>

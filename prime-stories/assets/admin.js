@@ -129,6 +129,26 @@
 				renumberSlides();
 			}
 		}
+
+		const moveUpButton = event.target.closest(".prime-stories-move-slide-up");
+		if (moveUpButton) {
+			event.preventDefault();
+			const row = moveUpButton.closest("[data-slide-row]");
+			if (row && row.previousElementSibling) {
+				row.parentNode.insertBefore(row, row.previousElementSibling);
+				renumberSlides();
+			}
+		}
+
+		const moveDownButton = event.target.closest(".prime-stories-move-slide-down");
+		if (moveDownButton) {
+			event.preventDefault();
+			const row = moveDownButton.closest("[data-slide-row]");
+			if (row && row.nextElementSibling) {
+				row.parentNode.insertBefore(row.nextElementSibling, row);
+				renumberSlides();
+			}
+		}
 	});
 
 	const addRuleButton = document.getElementById("prime-stories-add-rule");
@@ -171,6 +191,7 @@
 			const html = slideTemplate.innerHTML.replace(/__INDEX__/g, String(index));
 			slidesContainer.insertAdjacentHTML("beforeend", html);
 			renumberSlides();
+			syncSlideRows();
 		});
 	}
 
@@ -202,7 +223,69 @@
 		if (event.target && event.target.id === "prime_stories_media_type") {
 			syncMediaTypeFields();
 		}
+
+		if (event.target && event.target.closest("[data-slide-row]")) {
+			syncSlideRow(event.target.closest("[data-slide-row]"));
+		}
 	});
 
 	syncMediaTypeFields();
+
+	function syncSlideRow(row) {
+		if (!row) {
+			return;
+		}
+
+		const mediaType = row.querySelector('select[name$="[media_type]"]');
+		const actionType = row.querySelector('select[name$="[action_type]"]');
+		const imageInput = row.querySelector('input[name$="[image_id]"]');
+		const videoInput = row.querySelector('input[name$="[video_id]"]');
+		const actionPayload = row.querySelector("[data-slide-action-payload-field]");
+		const title = row.querySelector('input[name$="[title]"]');
+		const duration = row.querySelector('input[name$="[duration]"]');
+		const previewTitle = row.querySelector("[data-slide-preview-title]");
+		const previewMeta = row.querySelector("[data-slide-preview-meta]");
+
+		if (imageInput) {
+			const imageField = imageInput.closest(".prime-stories-media-field");
+			if (imageField) {
+				imageField.hidden = mediaType && mediaType.value === "video";
+			}
+		}
+
+		if (videoInput) {
+			const videoField = videoInput.closest(".prime-stories-media-field");
+			if (videoField) {
+				videoField.hidden = !mediaType || mediaType.value !== "video";
+			}
+		}
+
+		if (actionPayload) {
+			actionPayload.hidden = !actionType || actionType.value === "none" || actionType.value === "reaction";
+		}
+
+		if (previewTitle && title) {
+			previewTitle.textContent = title.value.trim() || getLabel("untitledSlide", "Untitled slide");
+		}
+
+		if (previewMeta) {
+			previewMeta.textContent = [duration && duration.value ? duration.value + "s" : "", actionType ? actionType.value : ""].filter(Boolean).join(" - ");
+		}
+	}
+
+	function syncSlideRows() {
+		if (!slidesContainer) {
+			return;
+		}
+
+		Array.from(slidesContainer.querySelectorAll("[data-slide-row]")).forEach(syncSlideRow);
+	}
+
+	document.addEventListener("input", function (event) {
+		if (event.target && event.target.closest("[data-slide-row]")) {
+			syncSlideRow(event.target.closest("[data-slide-row]"));
+		}
+	});
+
+	syncSlideRows();
 })();

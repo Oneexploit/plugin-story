@@ -151,9 +151,10 @@ class Prime_Stories_Assets {
 					'enableClientLog' => prime_stories_is_enabled( prime_stories_get_setting( 'enable_client_logging', 'yes' ) ),
 					'respectDnt'      => prime_stories_is_enabled( prime_stories_get_setting( 'respect_do_not_track', 'yes' ) ),
 					'i18n'            => array(
-						'close'  => __( 'Close story viewer', 'prime-stories' ),
-						'mute'   => __( 'Mute video', 'prime-stories' ),
-						'unmute' => __( 'Unmute video', 'prime-stories' ),
+						'close'     => __( 'Close story viewer', 'prime-stories' ),
+						'mute'      => __( 'Mute video', 'prime-stories' ),
+						'unmute'    => __( 'Unmute video', 'prime-stories' ),
+						'replySent' => __( 'Reply sent', 'prime-stories' ),
 					),
 				)
 			);
@@ -223,6 +224,7 @@ class Prime_Stories_Assets {
 				'mediaButton' => __( 'Use this media', 'prime-stories' ),
 				'emptyMedia'  => __( 'No media selected', 'prime-stories' ),
 				'mediaChosen' => __( 'Media selected', 'prime-stories' ),
+				'untitledSlide' => __( 'Untitled slide', 'prime-stories' ),
 				'groupOptions'=> array_map(
 					static function ( $term ) {
 						return array(

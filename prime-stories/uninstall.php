@@ -16,6 +16,7 @@ if ( ! is_array( $settings ) || empty( $settings['remove_data_on_uninstall'] ) |
 global $wpdb;
 
 wp_clear_scheduled_hook( 'prime_stories_daily_analytics_cleanup' );
+wp_clear_scheduled_hook( 'prime_stories_daily_maintenance' );
 
 register_post_type(
 	'prime_story',

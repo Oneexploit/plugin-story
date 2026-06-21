@@ -248,6 +248,8 @@ class Prime_Stories_Admin {
 		$analytics   = Prime_Stories_Analytics::get_instance();
 		$summary     = $analytics->get_summary();
 		$top_stories = $analytics->get_top_stories();
+		$interactions = $analytics->get_interaction_breakdown();
+		$recent_replies = $analytics->get_recent_replies();
 
 		include PRIME_STORIES_DIR . 'admin/views/analytics-page.php';
 	}

@@ -234,6 +234,28 @@ function prime_stories_get_default_slide_meta() {
 }
 
 /**
+ * Determine whether a normalized slide contains meaningful content.
+ *
+ * @param array<string, mixed> $slide Slide data.
+ * @return bool
+ */
+function prime_stories_slide_has_content( $slide ) {
+	foreach ( array( 'image_id', 'video_id', 'mobile_media_id', 'cover_image_id' ) as $media_key ) {
+		if ( ! empty( $slide[ $media_key ] ) ) {
+			return true;
+		}
+	}
+
+	foreach ( array( 'title', 'subtitle', 'caption', 'button_text', 'button_url', 'action_payload' ) as $content_key ) {
+		if ( ! empty( $slide[ $content_key ] ) ) {
+			return true;
+		}
+	}
+
+	return ! empty( $slide['action_type'] ) && 'none' !== $slide['action_type'];
+}
+
+/**
  * Sanitize an enum-like value.
  *
  * @param string $value Raw value.
@@ -327,7 +349,7 @@ function prime_stories_normalize_slides( $slides, $post_id = 0, $legacy_meta = a
 			$slide['action_type']     = prime_stories_sanitize_select( (string) $slide['action_type'], array( 'none', 'reaction', 'poll', 'question', 'countdown' ), 'none' );
 			$slide['action_payload']  = sanitize_textarea_field( (string) $slide['action_payload'] );
 
-			if ( $slide['image_id'] || $slide['video_id'] || $slide['mobile_media_id'] || $slide['cover_image_id'] || $slide['caption'] || $slide['button_url'] ) {
+			if ( prime_stories_slide_has_content( $slide ) ) {
 				$normalized[] = $slide;
 			}
 		}
@@ -538,6 +560,7 @@ function prime_stories_prepare_slide_payloads( $post_id, $slides ) {
 		$image_url     = ! empty( $slide['image_id'] ) ? wp_get_attachment_url( $slide['image_id'] ) : '';
 		$video_url     = ! empty( $slide['video_id'] ) ? wp_get_attachment_url( $slide['video_id'] ) : '';
 		$mobile_url    = ! empty( $slide['mobile_media_id'] ) ? wp_get_attachment_url( $slide['mobile_media_id'] ) : '';
+		$mobile_type   = ! empty( $slide['mobile_media_id'] ) ? (string) get_post_mime_type( $slide['mobile_media_id'] ) : '';
 		$cover_url     = ! empty( $slide['cover_image_id'] ) ? wp_get_attachment_image_url( $slide['cover_image_id'], 'medium' ) : '';
 		$preview_image = $cover_url ? $cover_url : ( 'image' === $slide['media_type'] ? $image_url : wp_get_attachment_image_url( get_post_thumbnail_id( $post_id ), 'medium' ) );
 
@@ -547,6 +570,14 @@ function prime_stories_prepare_slide_payloads( $post_id, $slides ) {
 
 		if ( 'image' === $slide['media_type'] && empty( $image_url ) ) {
 			$image_url = $mobile_url ? $mobile_url : $preview_image;
+		}
+
+		if ( 'video' === $slide['media_type'] && $mobile_url && 0 !== strpos( $mobile_type, 'video/' ) ) {
+			$mobile_url = '';
+		}
+
+		if ( 'image' === $slide['media_type'] && $mobile_url && ! wp_attachment_is_image( $slide['mobile_media_id'] ) ) {
+			$mobile_url = '';
 		}
 
 		$payloads[] = array(
@@ -615,20 +646,23 @@ function prime_stories_query_stories( $args = array() ) {
 	$query_args = array(
 		'post_type'              => 'prime_story',
 		'post_status'            => 'publish',
-		'posts_per_page'         => max( $args['limit'] * 4, 24 ),
+		'posts_per_page'         => min( 200, max( $args['limit'] * 8, 50 ) ),
 		'orderby'                => array(
 			'title' => 'ASC',
 		),
 		'meta_query'             => array(
-			'relation' => 'OR',
+			'relation' => 'AND',
 			array(
-				'key'     => 'prime_stories_story_status',
-				'compare' => 'NOT EXISTS',
-			),
-			array(
-				'key'     => 'prime_stories_story_status',
-				'value'   => array( 'active', 'scheduled' ),
-				'compare' => 'IN',
+				'relation' => 'OR',
+				array(
+					'key'     => 'prime_stories_story_status',
+					'compare' => 'NOT EXISTS',
+				),
+				array(
+					'key'     => 'prime_stories_story_status',
+					'value'   => array( 'active', 'scheduled' ),
+					'compare' => 'IN',
+				),
 			),
 		),
 		'ignore_sticky_posts'    => true,
@@ -652,7 +686,7 @@ function prime_stories_query_stories( $args = array() ) {
 	$query_args['paged'] = 1;
 	$query               = new WP_Query( $query_args );
 	$stories = array();
-	$max_pages = min( 10, max( 1, (int) $query->max_num_pages ) );
+	$max_pages = min( 20, max( 1, (int) $query->max_num_pages ) );
 
 	while ( ! empty( $query->posts ) && count( $stories ) < $args['limit'] && $query_args['paged'] <= $max_pages ) {
 		foreach ( $query->posts as $post ) {

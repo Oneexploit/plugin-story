@@ -6,6 +6,7 @@
 	const config = window.primeStoriesConfig || {};
 	const namespace = (window.PrimeStories = window.PrimeStories || {});
 	const seenStorageKey = "primeStoriesSeen";
+	const seenSlideStorageKey = "primeStoriesSeenSlides";
 	const sessionStorageKey = "primeStoriesSessionId";
 	const sessionCookieKey = "prime_stories_session_id";
 	const reportedIssues = new Set();
@@ -104,6 +105,35 @@
 				{ error: stringifyError(error) },
 				"warning",
 				"viewer.storage.save_seen"
+			);
+		}
+	}
+
+	function parseStoredStrings(key) {
+		try {
+			const raw = window.localStorage.getItem(key);
+			const parsed = raw ? JSON.parse(raw) : [];
+			return new Set(Array.isArray(parsed) ? parsed.map((value) => String(value)).filter(Boolean) : []);
+		} catch (error) {
+			reportClientIssue(
+				"Failed to parse story slide state from localStorage.",
+				{ error: stringifyError(error), key: key },
+				"warning",
+				"viewer.storage.parse_slides"
+			);
+			return new Set();
+		}
+	}
+
+	function storeStringSet(key, values) {
+		try {
+			window.localStorage.setItem(key, JSON.stringify(Array.from(values)));
+		} catch (error) {
+			reportClientIssue(
+				"Failed to persist story slide state to localStorage.",
+				{ error: stringifyError(error), key: key },
+				"warning",
+				"viewer.storage.save_slides"
 			);
 		}
 	}
@@ -245,6 +275,7 @@
 			this.sessionId = getSessionId();
 			this.sentImpressions = new Set();
 			this.seenIds = parseStoredIds();
+			this.seenSlideIds = parseStoredStrings(seenSlideStorageKey);
 			this.remoteSeenIds = new Set();
 			this.touchStartX = 0;
 			this.touchStartY = 0;
@@ -349,7 +380,7 @@
 
 				if (cta) {
 					cta.addEventListener("click", () => {
-						this.trackEvent("click", Number(slide.getAttribute("data-story-id")));
+						this.trackEvent("click", Number(slide.getAttribute("data-story-id")), this.getSlideMeta(slide));
 					});
 				}
 
@@ -364,9 +395,26 @@
 							reaction: reaction.getAttribute("data-story-reaction") || "",
 							slide: slide.getAttribute("data-slide-id") || "",
 						});
+						action.querySelectorAll("[data-story-reaction]").forEach((button) => {
+							button.classList.toggle("is-selected", button === reaction);
+						});
 					});
 
 					const reply = action.querySelector("[data-story-reply]");
+					const replySubmit = action.querySelector("[data-story-reply-submit]");
+					const sendReply = () => {
+						if (!reply || !reply.value.trim()) {
+							return;
+						}
+
+						this.trackEvent("reply", Number(slide.getAttribute("data-story-id")), {
+							slide: slide.getAttribute("data-slide-id") || "",
+							reply: reply.value.trim(),
+						});
+						reply.value = "";
+						reply.setAttribute("placeholder", getLabel("replySent", "Reply sent"));
+					};
+
 					if (reply) {
 						reply.addEventListener("keydown", (event) => {
 							if (event.key !== "Enter" || !reply.value.trim()) {
@@ -374,11 +422,12 @@
 							}
 
 							event.preventDefault();
-							this.trackEvent("reply", Number(slide.getAttribute("data-story-id")), {
-								slide: slide.getAttribute("data-slide-id") || "",
-							});
-							reply.value = "";
+							sendReply();
 						});
+					}
+
+					if (replySubmit) {
+						replySubmit.addEventListener("click", sendReply);
 					}
 				}
 
@@ -392,7 +441,7 @@
 							return;
 						}
 
-						this.trackEvent("click", Number(slide.getAttribute("data-story-id")));
+						this.trackEvent("click", Number(slide.getAttribute("data-story-id")), this.getSlideMeta(slide));
 						if (target === "new_tab") {
 							window.open(url, "_blank", "noopener");
 						} else {
@@ -520,20 +569,20 @@
 			const slide = this.slides[index];
 			const storyId = Number(slide.getAttribute("data-story-id"));
 			this.applyFitMode(slide);
-			this.markSeen(storyId);
-			this.trackEvent("open", storyId);
+			this.markSlideSeen(slide);
+			this.trackEvent("open", storyId, this.getSlideMeta(slide));
 			this.loadSlideMedia(slide);
 			this.loadAdjacentMedia(index);
 
 			const video = slide.querySelector("video");
 			if (video) {
-				this.activateVideo(video, storyId);
+				this.activateVideo(video, storyId, slide);
 				return;
 			}
 
 			const durationSeconds = Number(slide.getAttribute("data-duration")) || 5;
 			if (this.autoplay) {
-				this.startTimer(durationSeconds * 1000, storyId);
+				this.startTimer(durationSeconds * 1000, storyId, slide);
 			}
 		}
 
@@ -605,13 +654,13 @@
 			}
 		}
 
-		activateVideo(video, storyId) {
+		activateVideo(video, storyId, slide) {
 			this.updateMuteButton(video);
 			video.muted = this.isMuted;
 			video.currentTime = 0;
 
 			video.onended = () => {
-				this.trackEvent("complete", storyId);
+				this.completeSlide(storyId, slide || video.closest("[data-story-slide]"));
 				this.next();
 			};
 
@@ -631,7 +680,7 @@
 			if (playPromise && typeof playPromise.catch === "function") {
 				playPromise.catch(() => {
 					const slide = video.closest("[data-story-slide]");
-					this.startTimer((Number(slide && slide.getAttribute("data-duration")) || 5) * 1000, storyId);
+					this.startTimer((Number(slide && slide.getAttribute("data-duration")) || 5) * 1000, storyId, slide);
 				});
 			}
 		}
@@ -661,7 +710,8 @@
 			}
 
 			this.muteButton.hidden = false;
-			this.muteButton.textContent = this.isMuted ? getLabel("unmute", "Unmute") : getLabel("mute", "Mute");
+			this.muteButton.classList.toggle("is-muted", this.isMuted);
+			this.muteButton.setAttribute("aria-label", this.isMuted ? getLabel("unmute", "Unmute video") : getLabel("mute", "Mute video"));
 		}
 
 		toggleMute() {
@@ -680,7 +730,7 @@
 			this.updateMuteButton(video);
 		}
 
-		startTimer(duration, storyId) {
+		startTimer(duration, storyId, slide) {
 			this.stopTimer(false);
 			this.progressDuration = duration;
 			this.startedAt = performance.now();
@@ -697,7 +747,7 @@
 
 				if (ratio >= 1) {
 					this.elapsed = 0;
-					this.trackEvent("complete", storyId);
+					this.completeSlide(storyId, slide || this.slides[this.activeIndex]);
 					this.next();
 					return;
 				}
@@ -779,7 +829,18 @@
 			}
 
 			this.startedAt = performance.now();
-			this.startTimer(Math.max(this.progressDuration || 1, 1), storyId);
+			this.startTimer(Math.max(this.progressDuration || 1, 1), storyId, activeSlide);
+		}
+
+		getSlideMeta(slide) {
+			return {
+				slide: slide ? slide.getAttribute("data-slide-id") || "" : "",
+			};
+		}
+
+		completeSlide(storyId, slide) {
+			this.trackEvent("complete", storyId, this.getSlideMeta(slide));
+			this.markSlideSeen(slide);
 		}
 
 		renderProgress(currentRatio) {
@@ -864,6 +925,44 @@
 			} else {
 				this.resume();
 			}
+		}
+
+		markSlideSeen(slide) {
+			if (!slide) {
+				return;
+			}
+
+			const slideId = slide.getAttribute("data-slide-id") || "";
+			const storyId = Number(slide.getAttribute("data-story-id"));
+			if (!slideId || !storyId) {
+				return;
+			}
+
+			this.seenSlideIds.add(slideId);
+			storeStringSet(seenSlideStorageKey, this.seenSlideIds);
+
+			if (this.isStoryFullySeen(storyId)) {
+				this.markSeen(storyId);
+			}
+		}
+
+		isStoryFullySeen(storyId) {
+			const item = this.items.find((candidate) => Number(candidate.getAttribute("data-story-id")) === storyId);
+			if (!item) {
+				return false;
+			}
+
+			const start = Number(item.getAttribute("data-story-index")) || 0;
+			const count = Number(item.getAttribute("data-story-slide-count")) || 1;
+			for (let index = start; index < start + count; index += 1) {
+				const slide = this.slides[index];
+				const slideId = slide ? slide.getAttribute("data-slide-id") || "" : "";
+				if (!slideId || !this.seenSlideIds.has(slideId)) {
+					return false;
+				}
+			}
+
+			return true;
 		}
 
 		markSeen(storyId) {

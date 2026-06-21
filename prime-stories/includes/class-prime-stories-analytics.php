@@ -15,7 +15,7 @@ class Prime_Stories_Analytics {
 	/**
 	 * Current schema version.
 	 */
-	private const DB_VERSION = '1.2.0';
+	private const DB_VERSION = '1.2.1';
 
 	/**
 	 * Singleton instance.
@@ -80,8 +80,10 @@ class Prime_Stories_Analytics {
 		$sql = "CREATE TABLE {$table_name} (
 			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
 			story_id BIGINT UNSIGNED NOT NULL,
+			slide_id VARCHAR(100) NULL,
 			event_type VARCHAR(50) NOT NULL,
 			event_value VARCHAR(100) NULL,
+			action_payload TEXT NULL,
 			user_id BIGINT UNSIGNED NULL,
 			session_id VARCHAR(191) NULL,
 			source VARCHAR(100) NULL,
@@ -89,6 +91,7 @@ class Prime_Stories_Analytics {
 			created_at DATETIME NOT NULL,
 			PRIMARY KEY  (id),
 			KEY story_id (story_id),
+			KEY slide_id (slide_id),
 			KEY story_event (story_id, event_type),
 			KEY event_type (event_type),
 			KEY event_value (event_value),
@@ -164,7 +167,7 @@ class Prime_Stories_Analytics {
 	 * @param int    $user_id User ID.
 	 * @return bool
 	 */
-	public function track_event( $story_id, $event_type, $session_id = '', $user_id = 0, $source = '', $event_value = '' ) {
+	public function track_event( $story_id, $event_type, $session_id = '', $user_id = 0, $source = '', $event_value = '', $slide_id = '', $action_payload = '' ) {
 		global $wpdb;
 
 		if ( ! prime_stories_is_enabled( prime_stories_get_setting( 'enable_analytics', 'yes' ) ) ) {
@@ -182,13 +185,15 @@ class Prime_Stories_Analytics {
 		$session_id = prime_stories_sanitize_session_id( $session_id );
 		$source     = sanitize_key( (string) $source );
 		$event_value = sanitize_key( (string) $event_value );
+		$slide_id    = sanitize_key( (string) $slide_id );
+		$action_payload = sanitize_textarea_field( (string) $action_payload );
 
 		if ( 'prime_story' !== get_post_type( $story_id ) || 'publish' !== get_post_status( $story_id ) || ! in_array( $event_type, array( 'impression', 'open', 'complete', 'click', 'reaction', 'reply' ), true ) ) {
 			prime_stories_log( 'warning', 'Analytics event rejected because the story or event type was invalid.', array( 'story_id' => $story_id, 'event_type' => $event_type ), 'analytics.track_event' );
 			return false;
 		}
 
-		$rate_key = 'prime_stories_' . md5( $story_id . '|' . $event_type . '|' . $session_id . '|' . $user_id . '|' . $this->get_request_fingerprint() );
+		$rate_key = 'prime_stories_' . md5( $story_id . '|' . $slide_id . '|' . $event_type . '|' . $event_value . '|' . $session_id . '|' . $user_id . '|' . $this->get_request_fingerprint() );
 
 		if ( get_transient( $rate_key ) ) {
 			return false;
@@ -198,8 +203,10 @@ class Prime_Stories_Analytics {
 
 		$data = array(
 			'story_id'    => $story_id,
+			'slide_id'    => $slide_id ? substr( $slide_id, 0, 100 ) : null,
 			'event_type'  => $event_type,
 			'event_value' => $event_value ? substr( $event_value, 0, 100 ) : null,
+			'action_payload' => $action_payload ? substr( $action_payload, 0, 2000 ) : null,
 			'user_id'     => $user_id ? $user_id : null,
 			'session_id'  => $session_id ? $session_id : null,
 			'source'      => $source ? substr( $source, 0, 100 ) : null,
@@ -207,7 +214,7 @@ class Prime_Stories_Analytics {
 			'created_at'  => current_time( 'mysql' ),
 		);
 
-		$format = array( '%d', '%s', '%s', '%d', '%s', '%s', '%s', '%s' );
+		$format = array( '%d', '%s', '%s', '%s', '%s', '%d', '%s', '%s', '%s', '%s' );
 
 		$inserted = $wpdb->insert( $this->get_table_name(), $data, $format );
 
@@ -331,6 +338,88 @@ class Prime_Stories_Analytics {
 				prime_stories_log( 'error', 'Top stories analytics query failed.', array( 'db_error' => $wpdb->last_error ), 'analytics.top_stories' );
 			}
 
+			return array();
+		}
+
+		foreach ( $results as &$row ) {
+			$row['story_id'] = (int) $row['story_id'];
+			$row['title']    = get_the_title( $row['story_id'] );
+		}
+		unset( $row );
+
+		return $results;
+	}
+
+	/**
+	 * Get interaction totals grouped by value.
+	 *
+	 * @param int $limit Row limit.
+	 * @return array<int, array<string, mixed>>
+	 */
+	public function get_interaction_breakdown( $limit = 12 ) {
+		global $wpdb;
+
+		if ( ! $this->table_exists() ) {
+			return array();
+		}
+
+		$table = $this->get_table_name();
+		$limit = max( 1, absint( $limit ) );
+
+		$sql = $wpdb->prepare(
+			"SELECT story_id, slide_id, event_type, event_value, COUNT(*) AS total
+			FROM {$table}
+			WHERE event_type IN ('reaction', 'reply') AND event_value IS NOT NULL AND event_value != ''
+			GROUP BY story_id, slide_id, event_type, event_value
+			ORDER BY total DESC
+			LIMIT %d",
+			$limit
+		);
+
+		$results = $wpdb->get_results( $sql, ARRAY_A );
+
+		if ( ! is_array( $results ) ) {
+			return array();
+		}
+
+		foreach ( $results as &$row ) {
+			$row['story_id'] = (int) $row['story_id'];
+			$row['title']    = get_the_title( $row['story_id'] );
+			$row['total']    = (int) $row['total'];
+		}
+		unset( $row );
+
+		return $results;
+	}
+
+	/**
+	 * Get recent text replies.
+	 *
+	 * @param int $limit Row limit.
+	 * @return array<int, array<string, mixed>>
+	 */
+	public function get_recent_replies( $limit = 20 ) {
+		global $wpdb;
+
+		if ( ! $this->table_exists() ) {
+			return array();
+		}
+
+		$table = $this->get_table_name();
+		$limit = max( 1, absint( $limit ) );
+
+		$sql = $wpdb->prepare(
+			"SELECT story_id, slide_id, action_payload, created_at
+			FROM {$table}
+			WHERE event_type = 'reply' AND action_payload IS NOT NULL AND action_payload != ''
+			ORDER BY created_at DESC
+			LIMIT %d",
+			$limit
+		);
+
+		$results = $wpdb->get_results( $sql, ARRAY_A );
+
+		if ( ! is_array( $results ) ) {
 			return array();
 		}
 

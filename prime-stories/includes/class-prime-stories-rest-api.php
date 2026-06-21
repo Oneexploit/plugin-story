@@ -161,10 +161,23 @@ class Prime_Stories_REST_API {
 		$source     = sanitize_key( (string) $request->get_param( 'source' ) );
 		$meta       = $request->get_param( 'meta' );
 		$event_value = '';
+		$slide_id   = '';
+		$action_payload = '';
 		$user_id    = get_current_user_id();
 
-		if ( is_array( $meta ) && ! empty( $meta['reaction'] ) ) {
-			$event_value = sanitize_key( (string) $meta['reaction'] );
+		if ( is_array( $meta ) ) {
+			if ( ! empty( $meta['slide'] ) ) {
+				$slide_id = sanitize_key( (string) $meta['slide'] );
+			}
+
+			if ( ! empty( $meta['reaction'] ) ) {
+				$event_value = sanitize_key( (string) $meta['reaction'] );
+			}
+
+			if ( 'reply' === $event_type && ! empty( $meta['reply'] ) ) {
+				$event_value    = 'reply';
+				$action_payload = sanitize_textarea_field( (string) $meta['reply'] );
+			}
 		}
 
 		if ( ! $this->validate_story_id( $story_id ) ) {
@@ -195,7 +208,11 @@ class Prime_Stories_REST_API {
 			return new WP_Error( 'prime_stories_invalid_event', __( 'Invalid analytics event.', 'prime-stories' ), array( 'status' => 400 ) );
 		}
 
-		$tracked = Prime_Stories_Analytics::get_instance()->track_event( $story_id, $event_type, $session_id, $user_id, $source, $event_value );
+		if ( $slide_id && ! $this->validate_slide_id( $story_id, $slide_id ) ) {
+			return new WP_Error( 'prime_stories_invalid_slide', __( 'Invalid story slide.', 'prime-stories' ), array( 'status' => 400 ) );
+		}
+
+		$tracked = Prime_Stories_Analytics::get_instance()->track_event( $story_id, $event_type, $session_id, $user_id, $source, $event_value, $slide_id, $action_payload );
 
 		if ( ! $tracked ) {
 			prime_stories_log(
@@ -392,6 +409,34 @@ class Prime_Stories_REST_API {
 	 */
 	public function validate_event_type( $event_type ) {
 		return in_array( sanitize_key( (string) $event_type ), array( 'impression', 'open', 'complete', 'click', 'reaction', 'reply' ), true );
+	}
+
+	/**
+	 * Verify that a slide belongs to the story payload.
+	 *
+	 * @param int    $story_id Story ID.
+	 * @param string $slide_id Slide ID.
+	 * @return bool
+	 */
+	private function validate_slide_id( $story_id, $slide_id ) {
+		$payload = prime_stories_get_story_payload( absint( $story_id ) );
+		$slide_id = sanitize_key( (string) $slide_id );
+
+		if ( empty( $payload['slides'] ) || ! is_array( $payload['slides'] ) ) {
+			return false;
+		}
+
+		foreach ( $payload['slides'] as $slide ) {
+			if ( ! empty( $slide['id'] ) && sanitize_key( (string) $slide['id'] ) === $slide_id ) {
+				return true;
+			}
+
+			if ( ! empty( $slide['slide_id'] ) && sanitize_key( (string) $slide['slide_id'] ) === $slide_id ) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	/**
