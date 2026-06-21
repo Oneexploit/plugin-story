@@ -88,8 +88,20 @@ class Prime_Stories_Loader {
 		Prime_Stories_Analytics::get_instance();
 		Prime_Stories_REST_API::get_instance();
 		Prime_Stories_Elementor::get_instance();
+		$this->ensure_scheduled_events();
 
 		$this->booted = true;
+	}
+
+	/**
+	 * Ensure recurring maintenance events exist.
+	 *
+	 * @return void
+	 */
+	private function ensure_scheduled_events() {
+		if ( ! wp_next_scheduled( 'prime_stories_daily_analytics_cleanup' ) ) {
+			wp_schedule_event( time() + HOUR_IN_SECONDS, 'daily', 'prime_stories_daily_analytics_cleanup' );
+		}
 	}
 
 	/**
@@ -125,6 +137,9 @@ class Prime_Stories_Loader {
 
 		Prime_Stories_Post_Types::get_instance()->register();
 		Prime_Stories_Analytics::get_instance()->install();
+
+		self::get_instance()->ensure_scheduled_events();
+
 		update_option( 'prime_stories_version', PRIME_STORIES_VERSION );
 		flush_rewrite_rules();
 	}
@@ -135,6 +150,7 @@ class Prime_Stories_Loader {
 	 * @return void
 	 */
 	public static function deactivate() {
+		wp_clear_scheduled_hook( 'prime_stories_daily_analytics_cleanup' );
 		flush_rewrite_rules();
 	}
 }

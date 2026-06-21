@@ -15,7 +15,7 @@ class Prime_Stories_Analytics {
 	/**
 	 * Current schema version.
 	 */
-	private const DB_VERSION = '1.0.1';
+	private const DB_VERSION = '1.1.0';
 
 	/**
 	 * Singleton instance.
@@ -37,6 +37,7 @@ class Prime_Stories_Analytics {
 	private function __construct() {
 		add_action( 'admin_init', array( $this, 'maybe_upgrade' ) );
 		add_action( 'rest_api_init', array( $this, 'maybe_upgrade' ) );
+		add_action( 'prime_stories_daily_analytics_cleanup', array( $this, 'cleanup_old_events' ) );
 	}
 
 	/**
@@ -82,11 +83,16 @@ class Prime_Stories_Analytics {
 			event_type VARCHAR(50) NOT NULL,
 			user_id BIGINT UNSIGNED NULL,
 			session_id VARCHAR(191) NULL,
+			source VARCHAR(100) NULL,
+			device_type VARCHAR(20) NOT NULL DEFAULT 'desktop',
 			created_at DATETIME NOT NULL,
 			PRIMARY KEY  (id),
 			KEY story_id (story_id),
 			KEY story_event (story_id, event_type),
 			KEY event_type (event_type),
+			KEY session_id (session_id),
+			KEY source (source),
+			KEY device_type (device_type),
 			KEY created_at (created_at)
 		) {$charset_collate};";
 
@@ -111,6 +117,7 @@ class Prime_Stories_Analytics {
 
 		if ( $this->table_exists() ) {
 			update_option( 'prime_stories_db_version', self::DB_VERSION );
+			$this->cleanup_old_events();
 		}
 	}
 
@@ -155,7 +162,7 @@ class Prime_Stories_Analytics {
 	 * @param int    $user_id User ID.
 	 * @return bool
 	 */
-	public function track_event( $story_id, $event_type, $session_id = '', $user_id = 0 ) {
+	public function track_event( $story_id, $event_type, $session_id = '', $user_id = 0, $source = '' ) {
 		global $wpdb;
 
 		if ( ! prime_stories_is_enabled( prime_stories_get_setting( 'enable_analytics', 'yes' ) ) ) {
@@ -170,7 +177,8 @@ class Prime_Stories_Analytics {
 		$story_id   = absint( $story_id );
 		$event_type = sanitize_key( $event_type );
 		$user_id    = absint( $user_id );
-		$session_id = $this->sanitize_session_id( $session_id );
+		$session_id = prime_stories_sanitize_session_id( $session_id );
+		$source     = sanitize_key( (string) $source );
 
 		if ( 'prime_story' !== get_post_type( $story_id ) || 'publish' !== get_post_status( $story_id ) || ! in_array( $event_type, array( 'impression', 'open', 'complete', 'click' ), true ) ) {
 			prime_stories_log( 'warning', 'Analytics event rejected because the story or event type was invalid.', array( 'story_id' => $story_id, 'event_type' => $event_type ), 'analytics.track_event' );
@@ -186,26 +194,16 @@ class Prime_Stories_Analytics {
 		set_transient( $rate_key, 1, 10 );
 
 		$data = array(
-			'story_id'   => $story_id,
-			'event_type' => $event_type,
-			'created_at' => current_time( 'mysql' ),
+			'story_id'    => $story_id,
+			'event_type'  => $event_type,
+			'user_id'     => $user_id ? $user_id : null,
+			'session_id'  => $session_id ? $session_id : null,
+			'source'      => $source ? substr( $source, 0, 100 ) : null,
+			'device_type' => prime_stories_is_mobile_request() ? 'mobile' : 'desktop',
+			'created_at'  => current_time( 'mysql' ),
 		);
 
-		$format = array( '%d', '%s', '%s' );
-
-		if ( $user_id ) {
-			$data['user_id'] = $user_id;
-			$format[]        = '%d';
-		} else {
-			$data['user_id'] = null;
-		}
-
-		if ( $session_id ) {
-			$data['session_id'] = $session_id;
-			$format[]           = '%s';
-		} else {
-			$data['session_id'] = null;
-		}
+		$format = array( '%d', '%s', '%d', '%s', '%s', '%s', '%s' );
 
 		$inserted = $wpdb->insert( $this->get_table_name(), $data, $format );
 
@@ -239,6 +237,7 @@ class Prime_Stories_Analytics {
 				'open'            => 0,
 				'complete'        => 0,
 				'click'           => 0,
+				'unique_sessions' => 0,
 				'ctr'             => 0,
 				'completion_rate' => 0,
 			);
@@ -256,6 +255,7 @@ class Prime_Stories_Analytics {
 			'open'            => 0,
 			'complete'        => 0,
 			'click'           => 0,
+			'unique_sessions' => 0,
 			'ctr'             => 0,
 			'completion_rate' => 0,
 		);
@@ -269,6 +269,9 @@ class Prime_Stories_Analytics {
 				}
 			}
 		}
+
+		$unique_sessions = $wpdb->get_var( "SELECT COUNT(DISTINCT session_id) FROM {$table} WHERE session_id IS NOT NULL AND session_id != ''" ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+		$summary['unique_sessions'] = absint( $unique_sessions );
 
 		if ( $summary['open'] > 0 ) {
 			$summary['completion_rate'] = ( $summary['complete'] / $summary['open'] ) * 100;
@@ -302,7 +305,8 @@ class Prime_Stories_Analytics {
 				SUM(CASE WHEN event_type = 'impression' THEN 1 ELSE 0 END) AS impression_count,
 				SUM(CASE WHEN event_type = 'open' THEN 1 ELSE 0 END) AS open_count,
 				SUM(CASE WHEN event_type = 'complete' THEN 1 ELSE 0 END) AS complete_count,
-				SUM(CASE WHEN event_type = 'click' THEN 1 ELSE 0 END) AS click_count
+				SUM(CASE WHEN event_type = 'click' THEN 1 ELSE 0 END) AS click_count,
+				COUNT(DISTINCT session_id) AS unique_sessions
 			FROM {$table}
 			GROUP BY story_id
 			ORDER BY open_count DESC, impression_count DESC
@@ -342,15 +346,25 @@ class Prime_Stories_Analytics {
 	}
 
 	/**
-	 * Sanitize a client session ID.
+	 * Remove analytics events older than the configured retention window.
 	 *
-	 * @param string $session_id Raw session ID.
-	 * @return string
+	 * @return void
 	 */
-	private function sanitize_session_id( $session_id ) {
-		$session_id = sanitize_text_field( $session_id );
-		$session_id = preg_replace( '/[^a-zA-Z0-9\-\_]/', '', $session_id );
+	public function cleanup_old_events() {
+		global $wpdb;
 
-		return is_string( $session_id ) ? substr( $session_id, 0, 191 ) : '';
+		if ( ! $this->table_exists() ) {
+			return;
+		}
+
+		$retention_days = max( 1, absint( prime_stories_get_setting( 'analytics_retention_days', 180 ) ) );
+		$cutoff         = gmdate( 'Y-m-d H:i:s', time() - ( $retention_days * DAY_IN_SECONDS ) );
+
+		$wpdb->query(
+			$wpdb->prepare(
+				'DELETE FROM ' . $this->get_table_name() . ' WHERE created_at < %s',
+				$cutoff
+			)
+		); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
 	}
 }

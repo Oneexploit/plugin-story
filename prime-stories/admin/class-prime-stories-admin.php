@@ -344,6 +344,13 @@ class Prime_Stories_Admin {
 				'default'     => 'yes',
 				'description' => __( 'Store seen stories for guests and logged-in visitors.', 'prime-stories' ),
 			),
+			'enable_guest_seen_state' => array(
+				'label'       => __( 'Sync guest seen state', 'prime-stories' ),
+				'type'        => 'toggle',
+				'section'     => 'general',
+				'default'     => 'yes',
+				'description' => __( 'Persist guest seen-state with an anonymous session ID so initial rendering can reflect seen stories.', 'prime-stories' ),
+			),
 			'active_border_color' => array(
 				'label'   => __( 'Active border color', 'prime-stories' ),
 				'type'    => 'color',
@@ -388,6 +395,24 @@ class Prime_Stories_Admin {
 				'min'     => 48,
 				'max'     => 160,
 			),
+			'viewer_fit_mode' => array(
+				'label'   => __( 'Default media fit mode', 'prime-stories' ),
+				'type'    => 'select',
+				'section' => 'style',
+				'default' => 'cover',
+				'options' => array(
+					'cover'   => __( 'Fill frame', 'prime-stories' ),
+					'contain' => __( 'Show full media', 'prime-stories' ),
+				),
+			),
+			'overlay_opacity' => array(
+				'label'   => __( 'Viewer overlay strength', 'prime-stories' ),
+				'type'    => 'number',
+				'section' => 'style',
+				'default' => 70,
+				'min'     => 0,
+				'max'     => 100,
+			),
 			'load_assets_globally' => array(
 				'label'       => __( 'Load assets globally', 'prime-stories' ),
 				'type'        => 'toggle',
@@ -401,6 +426,22 @@ class Prime_Stories_Admin {
 				'section'     => 'performance',
 				'default'     => 'yes',
 				'description' => __( 'Delay story media loading until it is needed.', 'prime-stories' ),
+			),
+			'analytics_retention_days' => array(
+				'label'   => __( 'Analytics retention days', 'prime-stories' ),
+				'type'    => 'number',
+				'section' => 'performance',
+				'default' => 180,
+				'min'     => 1,
+				'max'     => 1095,
+			),
+			'guest_seen_retention_days' => array(
+				'label'   => __( 'Guest seen-state retention days', 'prime-stories' ),
+				'type'    => 'number',
+				'section' => 'performance',
+				'default' => 30,
+				'min'     => 1,
+				'max'     => 365,
 			),
 			'enable_debug_logging' => array(
 				'label'       => __( 'Enable diagnostic logging', 'prime-stories' ),

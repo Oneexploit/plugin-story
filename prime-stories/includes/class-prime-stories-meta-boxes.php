@@ -76,6 +76,7 @@ class Prime_Stories_Meta_Boxes {
 					<?php $this->render_media_field( 'video_id', __( 'Story video', 'prime-stories' ), $meta['video_id'] ); ?>
 					<?php $this->render_media_field( 'mobile_media_id', __( 'Mobile image/video override', 'prime-stories' ), $meta['mobile_media_id'] ); ?>
 					<?php $this->render_media_field( 'cover_image_id', __( 'Cover image', 'prime-stories' ), $meta['cover_image_id'] ); ?>
+					<?php $this->render_select_field( 'fit_mode', __( 'Media fit mode', 'prime-stories' ), $meta['fit_mode'], array( 'global' => __( 'Use global setting', 'prime-stories' ), 'cover' => __( 'Fill frame', 'prime-stories' ), 'contain' => __( 'Show full media', 'prime-stories' ) ) ); ?>
 				</div>
 
 				<div class="prime-stories-admin-card">
@@ -173,6 +174,9 @@ class Prime_Stories_Meta_Boxes {
 						break;
 					case 'open_on_click':
 						$value = prime_stories_sanitize_select( $raw_value, array( 'yes', 'no' ), 'no' );
+						break;
+					case 'fit_mode':
+						$value = prime_stories_sanitize_select( $raw_value, array( 'global', 'cover', 'contain' ), 'global' );
 						break;
 					case 'button_url':
 						$value = esc_url_raw( wp_unslash( (string) $raw_value ) );
@@ -458,12 +462,13 @@ class Prime_Stories_Meta_Boxes {
 		$file_url      = $attachment_id ? wp_get_attachment_url( $attachment_id ) : '';
 		$preview_url   = $preview_url ? $preview_url : $file_url;
 		$mime_type     = $attachment_id ? (string) get_post_mime_type( $attachment_id ) : '';
+		$library_type  = 'image_id' === $key || 'cover_image_id' === $key ? 'image' : ( 'video_id' === $key ? 'video' : 'media' );
 		?>
-		<div class="prime-stories-admin-field prime-stories-media-field">
+		<div class="prime-stories-admin-field prime-stories-media-field prime-stories-media-field-<?php echo esc_attr( $key ); ?>">
 			<label for="<?php echo esc_attr( 'prime_stories_' . $key ); ?>"><?php echo esc_html( $label ); ?></label>
 			<input type="hidden" id="<?php echo esc_attr( 'prime_stories_' . $key ); ?>" name="<?php echo esc_attr( 'prime_stories_' . $key ); ?>" value="<?php echo esc_attr( (string) $attachment_id ); ?>">
 			<div class="prime-stories-media-controls">
-				<button type="button" class="button prime-stories-media-select" data-target="<?php echo esc_attr( 'prime_stories_' . $key ); ?>">
+				<button type="button" class="button prime-stories-media-select" data-target="<?php echo esc_attr( 'prime_stories_' . $key ); ?>" data-library-type="<?php echo esc_attr( $library_type ); ?>">
 					<?php esc_html_e( 'Choose media', 'prime-stories' ); ?>
 				</button>
 				<button type="button" class="button-link-delete prime-stories-media-remove" data-target="<?php echo esc_attr( 'prime_stories_' . $key ); ?>">

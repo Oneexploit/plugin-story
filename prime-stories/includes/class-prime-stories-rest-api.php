@@ -69,6 +69,10 @@ class Prime_Stories_REST_API {
 						'type'              => 'string',
 						'sanitize_callback' => 'sanitize_text_field',
 					),
+					'source'     => array(
+						'type'              => 'string',
+						'sanitize_callback' => 'sanitize_key',
+					),
 				),
 			)
 		);
@@ -86,6 +90,10 @@ class Prime_Stories_REST_API {
 						'type'              => 'integer',
 						'sanitize_callback' => 'absint',
 						'validate_callback' => array( $this, 'validate_story_id' ),
+					),
+					'session_id' => array(
+						'type'              => 'string',
+						'sanitize_callback' => 'sanitize_text_field',
 					),
 				),
 			)
@@ -147,6 +155,7 @@ class Prime_Stories_REST_API {
 		$story_id   = absint( $request->get_param( 'story_id' ) );
 		$event_type = sanitize_key( (string) $request->get_param( 'event_type' ) );
 		$session_id = sanitize_text_field( (string) $request->get_param( 'session_id' ) );
+		$source     = sanitize_key( (string) $request->get_param( 'source' ) );
 		$user_id    = get_current_user_id();
 
 		if ( ! $this->validate_story_id( $story_id ) ) {
@@ -177,7 +186,7 @@ class Prime_Stories_REST_API {
 			return new WP_Error( 'prime_stories_invalid_event', __( 'Invalid analytics event.', 'prime-stories' ), array( 'status' => 400 ) );
 		}
 
-		$tracked = Prime_Stories_Analytics::get_instance()->track_event( $story_id, $event_type, $session_id, $user_id );
+		$tracked = Prime_Stories_Analytics::get_instance()->track_event( $story_id, $event_type, $session_id, $user_id, $source );
 
 		if ( ! $tracked ) {
 			prime_stories_log(
@@ -231,6 +240,8 @@ class Prime_Stories_REST_API {
 
 		if ( is_user_logged_in() ) {
 			prime_stories_mark_story_seen( $story_id, get_current_user_id() );
+		} else {
+			prime_stories_mark_guest_story_seen( $story_id, sanitize_text_field( (string) $request->get_param( 'session_id' ) ) );
 		}
 
 		return rest_ensure_response(
@@ -361,7 +372,7 @@ class Prime_Stories_REST_API {
 	public function validate_story_id( $story_id ) {
 		$story_id = absint( $story_id );
 
-		return $story_id > 0 && 'prime_story' === get_post_type( $story_id ) && 'publish' === get_post_status( $story_id );
+		return $story_id > 0 && prime_stories_is_story_visible( $story_id );
 	}
 
 	/**

@@ -19,6 +19,7 @@ function prime_stories_get_default_settings() {
 		'default_layout'           => 'circle',
 		'enable_analytics'         => 'yes',
 		'enable_seen_state'        => 'yes',
+		'enable_guest_seen_state'  => 'yes',
 		'active_border_color'      => '#ff6b35',
 		'seen_border_color'        => '#c7cad1',
 		'title_color'              => '#0f172a',
@@ -26,8 +27,12 @@ function prime_stories_get_default_settings() {
 		'button_background_color'  => '#ffffff',
 		'button_text_color'        => '#05070d',
 		'default_circle_size'      => 88,
+		'viewer_fit_mode'          => 'cover',
+		'overlay_opacity'          => 70,
 		'load_assets_globally'     => 'no',
 		'lazy_load_media'          => 'yes',
+		'analytics_retention_days' => 180,
+		'guest_seen_retention_days'=> 30,
 		'enable_debug_logging'     => 'yes',
 		'enable_client_logging'    => 'yes',
 		'custom_css'               => '',
@@ -195,6 +200,7 @@ function prime_stories_get_default_story_meta() {
 		'show_users'       => 'everyone',
 		'custom_css_class' => '',
 		'open_on_click'    => 'no',
+		'fit_mode'         => 'global',
 	);
 }
 
@@ -244,6 +250,7 @@ function prime_stories_get_story_meta( $post_id ) {
 	$meta['cover_image_id']  = absint( $meta['cover_image_id'] );
 	$meta['duration']        = max( 1, min( 60, absint( $meta['duration'] ) ) );
 	$meta['priority']        = (int) $meta['priority'];
+	$meta['fit_mode']        = prime_stories_sanitize_select( (string) $meta['fit_mode'], array( 'global', 'cover', 'contain' ), 'global' );
 
 	return $meta;
 }
@@ -411,6 +418,7 @@ function prime_stories_get_story_payload( $post_id ) {
 		'priority'         => (int) $meta['priority'],
 		'custom_css_class' => prime_stories_sanitize_class_list( $meta['custom_css_class'] ),
 		'open_on_click'    => 'yes' === $meta['open_on_click'],
+		'fit_mode'         => $meta['fit_mode'],
 		'groups'           => $groups,
 	);
 }
@@ -453,10 +461,9 @@ function prime_stories_query_stories( $args = array() ) {
 	$query_args = array(
 		'post_type'              => 'prime_story',
 		'post_status'            => 'publish',
-		'posts_per_page'         => -1,
+		'posts_per_page'         => max( $args['limit'] * 4, 24 ),
 		'orderby'                => array(
-			'menu_order' => 'ASC',
-			'title'      => 'ASC',
+			'title' => 'ASC',
 		),
 		'meta_query'             => array(
 			'relation' => 'OR',
@@ -471,7 +478,7 @@ function prime_stories_query_stories( $args = array() ) {
 			),
 		),
 		'ignore_sticky_posts'    => true,
-		'no_found_rows'          => true,
+		'no_found_rows'          => false,
 		'update_post_meta_cache' => true,
 		'update_post_term_cache' => true,
 	);
@@ -488,15 +495,30 @@ function prime_stories_query_stories( $args = array() ) {
 		);
 	}
 
-	$query   = new WP_Query( $query_args );
+	$query_args['paged'] = 1;
+	$query               = new WP_Query( $query_args );
 	$stories = array();
+	$max_pages = min( 10, max( 1, (int) $query->max_num_pages ) );
 
-	foreach ( $query->posts as $post ) {
-		if ( ! prime_stories_is_story_visible( $post->ID ) ) {
-			continue;
+	while ( ! empty( $query->posts ) && count( $stories ) < $args['limit'] && $query_args['paged'] <= $max_pages ) {
+		foreach ( $query->posts as $post ) {
+			if ( ! prime_stories_is_story_visible( $post->ID ) ) {
+				continue;
+			}
+
+			$stories[] = prime_stories_get_story_payload( $post->ID );
+
+			if ( count( $stories ) >= $args['limit'] ) {
+				break;
+			}
 		}
 
-		$stories[] = prime_stories_get_story_payload( $post->ID );
+		if ( count( $stories ) >= $args['limit'] || $query_args['paged'] >= $max_pages ) {
+			break;
+		}
+
+		$query_args['paged']++;
+		$query = new WP_Query( $query_args );
 	}
 
 	usort(
@@ -583,4 +605,74 @@ function prime_stories_mark_story_seen( $story_id, $user_id ) {
 
 	$seen[] = $story_id;
 	update_user_meta( $user_id, 'prime_stories_seen_story_ids', array_values( array_unique( $seen ) ) );
+}
+
+/**
+ * Sanitize a frontend session identifier.
+ *
+ * @param string $session_id Raw session ID.
+ * @return string
+ */
+function prime_stories_sanitize_session_id( $session_id ) {
+	$session_id = sanitize_text_field( (string) $session_id );
+	$session_id = preg_replace( '/[^a-zA-Z0-9\-\_]/', '', $session_id );
+
+	return is_string( $session_id ) ? substr( $session_id, 0, 191 ) : '';
+}
+
+/**
+ * Get the guest seen-state transient key for a session.
+ *
+ * @param string $session_id Frontend session ID.
+ * @return string
+ */
+function prime_stories_get_guest_seen_key( $session_id ) {
+	return 'prime_stories_guest_seen_' . md5( prime_stories_sanitize_session_id( $session_id ) );
+}
+
+/**
+ * Get seen story IDs for a guest session.
+ *
+ * @param string $session_id Frontend session ID.
+ * @return array<int, int>
+ */
+function prime_stories_get_guest_seen_story_ids( $session_id ) {
+	$session_id = prime_stories_sanitize_session_id( $session_id );
+
+	if ( ! $session_id || ! prime_stories_is_enabled( prime_stories_get_setting( 'enable_guest_seen_state', 'yes' ) ) ) {
+		return array();
+	}
+
+	$seen = get_transient( prime_stories_get_guest_seen_key( $session_id ) );
+
+	if ( ! is_array( $seen ) ) {
+		return array();
+	}
+
+	return array_values( array_unique( array_map( 'absint', $seen ) ) );
+}
+
+/**
+ * Mark a story as seen for a guest session.
+ *
+ * @param int    $story_id Story ID.
+ * @param string $session_id Frontend session ID.
+ * @return void
+ */
+function prime_stories_mark_guest_story_seen( $story_id, $session_id ) {
+	$story_id   = absint( $story_id );
+	$session_id = prime_stories_sanitize_session_id( $session_id );
+
+	if ( ! $story_id || ! $session_id || ! prime_stories_is_enabled( prime_stories_get_setting( 'enable_guest_seen_state', 'yes' ) ) ) {
+		return;
+	}
+
+	$seen = prime_stories_get_guest_seen_story_ids( $session_id );
+
+	if ( ! in_array( $story_id, $seen, true ) ) {
+		$seen[] = $story_id;
+	}
+
+	$retention_days = max( 1, absint( prime_stories_get_setting( 'guest_seen_retention_days', 30 ) ) );
+	set_transient( prime_stories_get_guest_seen_key( $session_id ), array_values( array_unique( $seen ) ), $retention_days * DAY_IN_SECONDS );
 }

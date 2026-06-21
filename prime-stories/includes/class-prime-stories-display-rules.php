@@ -263,7 +263,7 @@ class Prime_Stories_Display_Rules {
 	 * @return string
 	 */
 	public function inject_content_positions( $content ) {
-		if ( $this->content_injected || ! is_main_query() || ! in_the_loop() ) {
+		if ( $this->content_injected || ! is_main_query() || ! in_the_loop() || ( ! is_singular() && ! is_front_page() && ! is_home() ) ) {
 			return $content;
 		}
 
@@ -511,6 +511,7 @@ class Prime_Stories_Display_Rules {
 			'before_content'        => __( 'Before content', 'prime-stories' ),
 			'after_content'         => __( 'After content', 'prime-stories' ),
 			'before_footer'         => __( 'Before footer', 'prime-stories' ),
+			'after_footer'          => __( 'After footer', 'prime-stories' ),
 			'floating_bottom_left'  => __( 'Floating bottom left', 'prime-stories' ),
 			'floating_bottom_right' => __( 'Floating bottom right', 'prime-stories' ),
 			'floating_top_left'     => __( 'Floating top left', 'prime-stories' ),

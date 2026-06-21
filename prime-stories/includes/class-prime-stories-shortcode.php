@@ -65,6 +65,8 @@ class Prime_Stories_Shortcode {
 				'size'       => 'medium',
 				'class'      => '',
 				'open_mode'  => 'fullscreen',
+				'fit_mode'   => prime_stories_get_setting( 'viewer_fit_mode', 'cover' ),
+				'overlay'    => prime_stories_get_setting( 'overlay_opacity', 70 ),
 			),
 			$atts,
 			'prime_stories'
@@ -80,6 +82,8 @@ class Prime_Stories_Shortcode {
 				'size'       => prime_stories_sanitize_select( $atts['size'], array( 'small', 'medium', 'large' ), 'medium' ),
 				'class'      => prime_stories_sanitize_class_list( (string) $atts['class'] ),
 				'open_mode'  => prime_stories_sanitize_select( $atts['open_mode'], array( 'fullscreen', 'popup' ), 'fullscreen' ),
+				'fit_mode'   => prime_stories_sanitize_select( $atts['fit_mode'], array( 'cover', 'contain' ), prime_stories_get_setting( 'viewer_fit_mode', 'cover' ) ),
+				'overlay_opacity' => max( 0, min( 100, absint( $atts['overlay'] ) ) ),
 				'source'     => 'shortcode',
 			)
 		);

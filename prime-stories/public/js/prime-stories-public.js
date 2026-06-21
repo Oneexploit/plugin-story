@@ -7,6 +7,7 @@
 	const namespace = (window.PrimeStories = window.PrimeStories || {});
 	const seenStorageKey = "primeStoriesSeen";
 	const sessionStorageKey = "primeStoriesSessionId";
+	const sessionCookieKey = "prime_stories_session_id";
 	const reportedIssues = new Set();
 
 	function stringifyError(error) {
@@ -108,6 +109,7 @@
 		try {
 			const existing = window.localStorage.getItem(sessionStorageKey);
 			if (existing) {
+				writeSessionCookie(existing);
 				return existing;
 			}
 
@@ -117,6 +119,7 @@
 					: "prime-stories-" + Date.now() + "-" + Math.floor(Math.random() * 100000);
 
 			window.localStorage.setItem(sessionStorageKey, created);
+			writeSessionCookie(created);
 			return created;
 		} catch (error) {
 			reportClientIssue(
@@ -125,8 +128,26 @@
 				"warning",
 				"viewer.storage.session"
 			);
-			return "prime-stories-" + Date.now();
+			const fallback = "prime-stories-" + Date.now();
+			writeSessionCookie(fallback);
+			return fallback;
 		}
+	}
+
+	function writeSessionCookie(sessionId) {
+		if (!sessionId || !config.enableGuestSeen) {
+			return;
+		}
+
+		const retentionDays = Math.max(1, Number(config.guestSeenDays) || 30);
+		const expires = new Date(Date.now() + retentionDays * 86400000).toUTCString();
+		document.cookie =
+			sessionCookieKey +
+			"=" +
+			encodeURIComponent(sessionId) +
+			"; expires=" +
+			expires +
+			"; path=/; SameSite=Lax";
 	}
 
 	function request(endpoint, payload, options) {
@@ -197,6 +218,7 @@
 			}
 
 			this.wrapper = wrapper;
+			this.instanceId = wrapper.getAttribute("data-instance-id") || "";
 			this.track = wrapper.querySelector(".prime-stories-track");
 			this.items = Array.from(wrapper.querySelectorAll("[data-story-trigger]"));
 			this.viewer = wrapper.querySelector(".prime-stories-viewer");
@@ -222,6 +244,7 @@
 			this.seenIds = parseStoredIds();
 			this.remoteSeenIds = new Set();
 			this.touchStartX = 0;
+			this.touchStartY = 0;
 			this.keydownHandler = this.handleKeydown.bind(this);
 			this.visibilityHandler = this.handleVisibilityChange.bind(this);
 
@@ -283,6 +306,7 @@
 					}
 
 					this.touchStartX = touch.clientX;
+					this.touchStartY = touch.clientY;
 				},
 				{ passive: true }
 			);
@@ -296,6 +320,12 @@
 					}
 
 					const distance = touch.clientX - this.touchStartX;
+					const verticalDistance = touch.clientY - this.touchStartY;
+					if (verticalDistance > 70 && verticalDistance > Math.abs(distance)) {
+						this.close();
+						return;
+					}
+
 					if (Math.abs(distance) < 30) {
 						return;
 					}
@@ -454,6 +484,7 @@
 
 			const slide = this.slides[index];
 			const storyId = Number(slide.getAttribute("data-story-id"));
+			this.applyFitMode(slide);
 			this.markSeen(storyId);
 			this.trackEvent("open", storyId);
 			this.loadSlideMedia(slide);
@@ -469,6 +500,12 @@
 			if (this.autoplay) {
 				this.startTimer(durationSeconds * 1000, storyId);
 			}
+		}
+
+		applyFitMode(slide) {
+			const fitMode = slide.getAttribute("data-fit-mode") === "contain" ? "contain" : "cover";
+			this.dialog.classList.toggle("prime-stories-fit-contain", fitMode === "contain");
+			this.dialog.classList.toggle("prime-stories-fit-cover", fitMode !== "contain");
 		}
 
 		loadAdjacentMedia(index) {
@@ -558,7 +595,8 @@
 			const playPromise = video.play();
 			if (playPromise && typeof playPromise.catch === "function") {
 				playPromise.catch(() => {
-					this.startTimer((Number(video.getAttribute("data-duration")) || 5) * 1000, storyId);
+					const slide = video.closest("[data-story-slide]");
+					this.startTimer((Number(slide && slide.getAttribute("data-duration")) || 5) * 1000, storyId);
 				});
 			}
 		}
@@ -751,12 +789,37 @@
 			if (event.key === "Escape") {
 				event.preventDefault();
 				this.close();
+			} else if (event.key === "Tab") {
+				this.trapFocus(event);
 			} else if (event.key === "ArrowRight") {
 				event.preventDefault();
 				this.next();
 			} else if (event.key === "ArrowLeft") {
 				event.preventDefault();
 				this.previous();
+			}
+		}
+
+		trapFocus(event) {
+			const focusable = Array.from(
+				this.dialog.querySelectorAll('a[href], button:not([disabled]):not([hidden]), [tabindex]:not([tabindex="-1"])')
+			).filter((element) => element instanceof HTMLElement && element.offsetParent !== null);
+
+			if (!focusable.length) {
+				event.preventDefault();
+				this.dialog.focus({ preventScroll: true });
+				return;
+			}
+
+			const first = focusable[0];
+			const last = focusable[focusable.length - 1];
+
+			if (event.shiftKey && document.activeElement === first) {
+				event.preventDefault();
+				last.focus({ preventScroll: true });
+			} else if (!event.shiftKey && document.activeElement === last) {
+				event.preventDefault();
+				first.focus({ preventScroll: true });
 			}
 		}
 
@@ -785,7 +848,7 @@
 				item.classList.remove("prime-stories-item-unseen");
 			});
 
-			if (config.isUserLoggedIn && !this.remoteSeenIds.has(storyId)) {
+			if ((config.isUserLoggedIn || config.enableGuestSeen) && !this.remoteSeenIds.has(storyId)) {
 				this.remoteSeenIds.add(storyId);
 				request("/seen", {
 					story_id: storyId,
@@ -812,6 +875,7 @@
 				story_id: storyId,
 				event_type: eventType,
 				session_id: this.sessionId,
+				source: this.instanceId || this.wrapper.getAttribute("data-layout") || "viewer",
 			});
 		}
 	}

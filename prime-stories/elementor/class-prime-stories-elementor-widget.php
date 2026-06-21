@@ -275,6 +275,37 @@ class Prime_Stories_Elementor_Widget extends \Elementor\Widget_Base {
 		);
 
 		$this->add_control(
+			'fit_mode',
+			array(
+				'label'   => __( 'Media fit mode', 'prime-stories' ),
+				'type'    => \Elementor\Controls_Manager::SELECT,
+				'options' => array(
+					'cover'   => __( 'Fill frame', 'prime-stories' ),
+					'contain' => __( 'Show full media', 'prime-stories' ),
+				),
+				'default' => prime_stories_get_setting( 'viewer_fit_mode', 'cover' ),
+			)
+		);
+
+		$this->add_control(
+			'overlay_opacity',
+			array(
+				'label'      => __( 'Overlay strength', 'prime-stories' ),
+				'type'       => \Elementor\Controls_Manager::SLIDER,
+				'size_units' => array( '%' ),
+				'range'      => array(
+					'%' => array(
+						'min' => 0,
+						'max' => 100,
+					),
+				),
+				'selectors'  => array(
+					'{{WRAPPER}} .prime-stories-wrapper' => '--prime-stories-overlay-opacity: {{SIZE}}%;',
+				),
+			)
+		);
+
+		$this->add_control(
 			'button_background',
 			array(
 				'label'     => __( 'Button color', 'prime-stories' ),
@@ -379,6 +410,8 @@ class Prime_Stories_Elementor_Widget extends \Elementor\Widget_Base {
 				'show_title'    => 'yes' === $settings['show_title'],
 				'open_mode'     => prime_stories_sanitize_select( (string) $settings['open_mode'], array( 'fullscreen', 'popup' ), 'fullscreen' ),
 				'class'         => prime_stories_sanitize_class_list( (string) $settings['custom_class'] ),
+				'fit_mode'      => prime_stories_sanitize_select( (string) $settings['fit_mode'], array( 'cover', 'contain' ), prime_stories_get_setting( 'viewer_fit_mode', 'cover' ) ),
+				'overlay_opacity' => isset( $settings['overlay_opacity']['size'] ) ? absint( $settings['overlay_opacity']['size'] ) : prime_stories_get_setting( 'overlay_opacity', 70 ),
 				'hide_desktop'  => 'yes' === $settings['hide_desktop'],
 				'hide_tablet'   => 'yes' === $settings['hide_tablet'],
 				'hide_mobile'   => 'yes' === $settings['hide_mobile'],

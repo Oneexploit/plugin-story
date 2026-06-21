@@ -64,6 +64,8 @@ class Prime_Stories_Public {
 			'button_background'    => '',
 			'button_text_color'    => '',
 			'border_radius'        => 22,
+			'fit_mode'             => prime_stories_get_setting( 'viewer_fit_mode', 'cover' ),
+			'overlay_opacity'      => prime_stories_get_setting( 'overlay_opacity', 70 ),
 			'hide_desktop'         => false,
 			'hide_tablet'          => false,
 			'hide_mobile'          => false,
@@ -75,6 +77,7 @@ class Prime_Stories_Public {
 		$args['layout']    = prime_stories_sanitize_select( (string) $args['layout'], array( 'circle', 'square', 'slider', 'floating' ), prime_stories_get_setting( 'default_layout', 'circle' ) );
 		$args['size']      = prime_stories_sanitize_select( (string) $args['size'], array( 'small', 'medium', 'large' ), 'medium' );
 		$args['open_mode'] = prime_stories_sanitize_select( (string) $args['open_mode'], array( 'fullscreen', 'popup' ), 'fullscreen' );
+		$args['fit_mode']  = prime_stories_sanitize_select( (string) $args['fit_mode'], array( 'cover', 'contain' ), prime_stories_get_setting( 'viewer_fit_mode', 'cover' ) );
 		$args['limit']     = max( 1, absint( $args['limit'] ) );
 		$args['autoplay']  = (bool) $args['autoplay'];
 		$args['show_title'] = (bool) $args['show_title'];
@@ -110,7 +113,8 @@ class Prime_Stories_Public {
 		$settings        = prime_stories_get_settings();
 		$wrapper_classes = $this->get_wrapper_classes( $args );
 		$inline_style    = $this->get_wrapper_style( $args, $settings );
-		$seen_story_ids  = is_user_logged_in() ? prime_stories_get_seen_story_ids( get_current_user_id() ) : array();
+		$guest_session_id = isset( $_COOKIE['prime_stories_session_id'] ) ? prime_stories_sanitize_session_id( wp_unslash( (string) $_COOKIE['prime_stories_session_id'] ) ) : '';
+		$seen_story_ids   = is_user_logged_in() ? prime_stories_get_seen_story_ids( get_current_user_id() ) : prime_stories_get_guest_seen_story_ids( $guest_session_id );
 
 		ob_start();
 		include PRIME_STORIES_DIR . 'public/templates/story-viewer.php';
@@ -180,6 +184,7 @@ class Prime_Stories_Public {
 			'--prime-stories-button-bg'         => sanitize_hex_color( (string) ( $args['button_background'] ?: $settings['button_background_color'] ) ) ?: $settings['button_background_color'],
 			'--prime-stories-button-color'      => sanitize_hex_color( (string) ( $args['button_text_color'] ?: $settings['button_text_color'] ) ) ?: $settings['button_text_color'],
 			'--prime-stories-radius'            => max( 0, absint( $args['border_radius'] ) ) . 'px',
+			'--prime-stories-overlay-opacity'   => ( max( 0, min( 100, absint( $args['overlay_opacity'] ) ) ) / 100 ),
 		);
 
 		$style = '';

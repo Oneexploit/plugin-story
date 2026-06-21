@@ -70,6 +70,7 @@ defined( 'ABSPATH' ) || exit;
 						data-button-url="<?php echo esc_url( $story['button_url'] ); ?>"
 						data-button-target="<?php echo esc_attr( $story['button_target'] ); ?>"
 						data-open-on-click="<?php echo $story['open_on_click'] ? 'true' : 'false'; ?>"
+						data-fit-mode="<?php echo esc_attr( 'global' === $story['fit_mode'] ? $args['fit_mode'] : $story['fit_mode'] ); ?>"
 						hidden
 					>
 						<div class="prime-stories-slide-media" data-story-clickable>

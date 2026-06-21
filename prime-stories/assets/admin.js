@@ -9,18 +9,24 @@
 		return adminConfig[key] || fallback;
 	}
 
-	function createMediaFrame(onSelect) {
+	function createMediaFrame(onSelect, libraryType) {
 		if (!window.wp || !window.wp.media) {
 			return null;
 		}
 
-		const frame = window.wp.media({
+		const mediaOptions = {
 			title: getLabel("mediaTitle", "Choose media"),
 			button: {
 				text: getLabel("mediaButton", "Use this media"),
 			},
 			multiple: false,
-		});
+		};
+
+		if (libraryType === "image" || libraryType === "video") {
+			mediaOptions.library = { type: libraryType };
+		}
+
+		const frame = window.wp.media(mediaOptions);
 
 		frame.on("select", function () {
 			const attachment = frame.state().get("selection").first().toJSON();
@@ -82,7 +88,7 @@
 			const frame = createMediaFrame(function (attachment) {
 				input.value = attachment.id || "";
 				updateMediaPreview(input, attachment);
-			});
+			}, selectButton.getAttribute("data-library-type") || "media");
 
 			if (frame) {
 				frame.open();
@@ -136,4 +142,30 @@
 			$(".prime-stories-color-field").wpColorPicker();
 		});
 	}
+
+	function syncMediaTypeFields() {
+		const mediaType = document.getElementById("prime_stories_media_type");
+		if (!mediaType) {
+			return;
+		}
+
+		const imageField = document.querySelector(".prime-stories-media-field-image_id");
+		const videoField = document.querySelector(".prime-stories-media-field-video_id");
+
+		if (imageField) {
+			imageField.hidden = mediaType.value === "video";
+		}
+
+		if (videoField) {
+			videoField.hidden = mediaType.value !== "video";
+		}
+	}
+
+	document.addEventListener("change", function (event) {
+		if (event.target && event.target.id === "prime_stories_media_type") {
+			syncMediaTypeFields();
+		}
+	});
+
+	syncMediaTypeFields();
 })();

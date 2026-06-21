@@ -3,7 +3,7 @@ Contributors: webiitor
 Tags: stories, elementor, shortcode, video stories, image stories
 Requires at least: 6.4
 Requires PHP: 8.0
-Stable tag: 1.0.2
+Stable tag: 1.1.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -56,6 +56,11 @@ Use the shortcode:
 `[prime_stories group="homepage" layout="circle" limit="10" autoplay="true"]`
 
 == Changelog ==
+
+= 1.1.0 =
+
+* Improved the frontend story viewer with safer CTA layering, swipe-down close, focus trapping, media fit modes, safer video duration fallback, and guest seen-state sync.
+* Added type-aware media picking, conditional story media fields, per-story fit mode, stronger analytics metadata, retention cleanup, and fuller uninstall cleanup.
 
 = 1.0.2 =
 
