@@ -75,7 +75,7 @@ defined( 'ABSPATH' ) || exit;
 						data-duration="<?php echo esc_attr( (string) $story['duration'] ); ?>"
 						data-button-url="<?php echo esc_url( $story['button_url'] ); ?>"
 						data-button-target="<?php echo esc_attr( $story['button_target'] ); ?>"
-						data-open-on-click="<?php echo $story['open_on_click'] ? 'true' : 'false'; ?>"
+						data-open-on-click="<?php echo 'yes' === $story['open_on_click'] ? 'true' : 'false'; ?>"
 						data-fit-mode="<?php echo esc_attr( 'global' === $story['fit_mode'] ? $args['fit_mode'] : $story['fit_mode'] ); ?>"
 						data-focal-x="<?php echo esc_attr( (string) ( $story['focal_x'] ?? 50 ) ); ?>"
 						data-focal-y="<?php echo esc_attr( (string) ( $story['focal_y'] ?? 50 ) ); ?>"
@@ -142,10 +142,10 @@ defined( 'ABSPATH' ) || exit;
 								<div
 									class="prime-stories-action prime-stories-action-<?php echo esc_attr( $story['action_type'] ); ?>"
 									data-story-action="<?php echo esc_attr( $story['action_type'] ); ?>"
-									data-poll-show-results="<?php echo ! empty( $story['poll_show_results'] ) ? 'true' : 'false'; ?>"
-									data-poll-vote-once="<?php echo ! empty( $story['poll_vote_once'] ) ? 'true' : 'false'; ?>"
+									data-poll-show-results="<?php echo 'yes' === $story['poll_show_results'] ? 'true' : 'false'; ?>"
+									data-poll-vote-once="<?php echo 'yes' === $story['poll_vote_once'] ? 'true' : 'false'; ?>"
 									data-success-message="<?php echo esc_attr( ! empty( $story['question_success_message'] ) ? $story['question_success_message'] : __( 'Sent', 'prime-stories' ) ); ?>"
-									data-allow-multiple-replies="<?php echo ! empty( $story['allow_multiple_replies'] ) ? 'true' : 'false'; ?>"
+									data-allow-multiple-replies="<?php echo 'yes' === $story['allow_multiple_replies'] ? 'true' : 'false'; ?>"
 								>
 									<?php if ( 'reaction' === $story['action_type'] ) : ?>
 										<button type="button" data-story-reaction="like"><?php esc_html_e( 'Like', 'prime-stories' ); ?></button>

@@ -58,38 +58,11 @@ class Prime_Stories_Admin {
 	public function register_admin_pages() {
 		add_submenu_page(
 			'edit.php?post_type=prime_story',
-			__( 'Story Studio', 'prime-stories' ),
-			__( 'Story Studio', 'prime-stories' ),
+			__( 'Story Manager', 'prime-stories' ),
+			__( 'Story Manager', 'prime-stories' ),
 			'edit_posts',
 			'prime-stories-studio',
 			array( $this, 'render_story_studio_page' )
-		);
-
-		add_submenu_page(
-			'edit.php?post_type=prime_story',
-			__( 'Settings', 'prime-stories' ),
-			__( 'Settings', 'prime-stories' ),
-			'manage_options',
-			'prime-stories-settings',
-			array( $this, 'render_settings_page' )
-		);
-
-		add_submenu_page(
-			'edit.php?post_type=prime_story',
-			__( 'Analytics', 'prime-stories' ),
-			__( 'Analytics', 'prime-stories' ),
-			'manage_options',
-			'prime-stories-analytics',
-			array( $this, 'render_analytics_page' )
-		);
-
-		add_submenu_page(
-			'edit.php?post_type=prime_story',
-			__( 'Logs', 'prime-stories' ),
-			__( 'Logs', 'prime-stories' ),
-			'manage_options',
-			'prime-stories-logs',
-			array( $this, 'render_logs_page' )
 		);
 	}
 

@@ -10,8 +10,8 @@ defined( 'ABSPATH' ) || exit;
 <div class="wrap prime-stories-admin-wrap">
 	<?php
 	prime_stories_render_admin_header(
-		__( 'Story Studio', 'prime-stories' ),
-		__( 'Manage stories, highlights, schedules, and slide counts from one focused workspace.', 'prime-stories' )
+		__( 'Story Manager', 'prime-stories' ),
+		__( 'Create and manage clean image and video stories from one place.', 'prime-stories' )
 	);
 	?>
 
@@ -24,48 +24,18 @@ defined( 'ABSPATH' ) || exit;
 		<a class="button button-primary" href="<?php echo esc_url( admin_url( 'post-new.php?post_type=prime_story' ) ); ?>"><?php esc_html_e( 'Create Story', 'prime-stories' ); ?></a>
 	</form>
 
-	<table class="widefat striped prime-stories-studio-table">
-		<thead>
-			<tr>
-				<th><?php esc_html_e( 'Story', 'prime-stories' ); ?></th>
-				<th><?php esc_html_e( 'Groups', 'prime-stories' ); ?></th>
-				<th><?php esc_html_e( 'Status', 'prime-stories' ); ?></th>
-				<th><?php esc_html_e( 'Schedule', 'prime-stories' ); ?></th>
-				<th><?php esc_html_e( 'Slides', 'prime-stories' ); ?></th>
-				<th><?php esc_html_e( 'Updated', 'prime-stories' ); ?></th>
-				<th><?php esc_html_e( 'Actions', 'prime-stories' ); ?></th>
-			</tr>
-		</thead>
-		<tbody>
+	<div class="prime-stories-studio-grid">
 			<?php if ( empty( $stories ) ) : ?>
-				<tr>
-					<td colspan="7"><?php esc_html_e( 'No stories found. Create your first story to start building a highlight experience.', 'prime-stories' ); ?></td>
-				</tr>
+				<div class="prime-stories-empty"><span class="dashicons dashicons-format-gallery"></span><h2><?php esc_html_e( 'No stories yet', 'prime-stories' ); ?></h2><p><?php esc_html_e( 'Create your first image or video story.', 'prime-stories' ); ?></p></div>
 			<?php else : ?>
 				<?php foreach ( $stories as $story ) : ?>
-					<tr>
-						<td>
-							<strong><?php echo esc_html( $story['title'] ? $story['title'] : __( '(no title)', 'prime-stories' ) ); ?></strong>
-							<small>#<?php echo esc_html( (string) $story['id'] ); ?></small>
-						</td>
-						<td><?php echo esc_html( ! empty( $story['groups'] ) && is_array( $story['groups'] ) ? implode( ', ', $story['groups'] ) : __( 'No group', 'prime-stories' ) ); ?></td>
-						<td><span class="prime-stories-status-pill prime-stories-status-<?php echo esc_attr( sanitize_html_class( $story['status'] ) ); ?>"><?php echo esc_html( ucfirst( $story['status'] ) ); ?></span></td>
-						<td>
-							<?php if ( $story['start_datetime'] || $story['end_datetime'] ) : ?>
-								<?php echo esc_html( trim( $story['start_datetime'] . ' - ' . $story['end_datetime'], ' -' ) ); ?>
-							<?php else : ?>
-								<?php esc_html_e( 'Always active', 'prime-stories' ); ?>
-							<?php endif; ?>
-						</td>
-						<td><?php echo esc_html( number_format_i18n( (int) $story['slides'] ) ); ?></td>
-						<td><?php echo esc_html( (string) $story['modified'] ); ?></td>
-						<td>
-							<a class="button button-small" href="<?php echo esc_url( $story['edit_link'] ); ?>"><?php esc_html_e( 'Edit', 'prime-stories' ); ?></a>
-							<a class="button button-small" href="<?php echo esc_url( admin_url( 'edit.php?post_type=prime_story&page=prime-stories-analytics' ) ); ?>"><?php esc_html_e( 'Analytics', 'prime-stories' ); ?></a>
-						</td>
-					</tr>
+					<a class="prime-stories-story-card" href="<?php echo esc_url( $story['edit_link'] ); ?>">
+						<div class="prime-stories-story-card-icon"><span class="dashicons dashicons-format-video"></span></div>
+						<div class="prime-stories-story-card-body"><h2><?php echo esc_html( $story['title'] ? $story['title'] : __( 'Untitled story', 'prime-stories' ) ); ?></h2><p><?php printf( esc_html__( '%1$d slides · Updated %2$s', 'prime-stories' ), (int) $story['slides'], esc_html( (string) $story['modified'] ) ); ?></p></div>
+						<span class="prime-stories-status-pill prime-stories-status-<?php echo esc_attr( sanitize_html_class( $story['status'] ) ); ?>"><?php echo esc_html( 'active' === $story['status'] ? __( 'Active', 'prime-stories' ) : __( 'Inactive', 'prime-stories' ) ); ?></span>
+						<span class="dashicons dashicons-arrow-left-alt2"></span>
+					</a>
 				<?php endforeach; ?>
 			<?php endif; ?>
-		</tbody>
-	</table>
+	</div>
 </div>

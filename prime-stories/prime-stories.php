@@ -3,7 +3,7 @@
  * Plugin Name: Prime Stories
  * Plugin URI: https://webiitor.ir/
  * Description: Prime Stories by Webiitor adds a professional Instagram-style story system to WordPress with Elementor support, shortcode placement, scheduling, smart display rules, and basic analytics.
- * Version: 1.4.0
+ * Version: 2.0.0
  * Requires at least: 6.4
  * Requires PHP: 8.0
  * Author: Webiitor
@@ -17,7 +17,7 @@
 defined( 'ABSPATH' ) || exit;
 
 if ( ! defined( 'PRIME_STORIES_VERSION' ) ) {
-	define( 'PRIME_STORIES_VERSION', '1.4.0' );
+	define( 'PRIME_STORIES_VERSION', '2.0.0' );
 }
 
 if ( ! defined( 'PRIME_STORIES_FILE' ) ) {

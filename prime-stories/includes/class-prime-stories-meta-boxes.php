@@ -73,18 +73,10 @@ class Prime_Stories_Meta_Boxes {
 				<?php $this->render_legacy_hidden_fields( $meta ); ?>
 				<div class="prime-stories-admin-grid">
 					<div class="prime-stories-admin-card">
-						<h3><?php esc_html_e( 'Publishing', 'prime-stories' ); ?></h3>
-						<?php $this->render_number_field( 'priority', __( 'Priority / order', 'prime-stories' ), (int) $meta['priority'] ); ?>
-						<?php $this->render_select_field( 'story_status', __( 'Story status', 'prime-stories' ), $meta['story_status'], array( 'active' => __( 'Active', 'prime-stories' ), 'inactive' => __( 'Inactive', 'prime-stories' ), 'scheduled' => __( 'Scheduled', 'prime-stories' ), 'expired' => __( 'Expired', 'prime-stories' ) ) ); ?>
-						<?php $this->render_datetime_field( 'start_datetime', __( 'Start datetime', 'prime-stories' ), $meta['start_datetime'] ); ?>
-						<?php $this->render_datetime_field( 'end_datetime', __( 'End datetime', 'prime-stories' ), $meta['end_datetime'] ); ?>
-					</div>
-
-					<div class="prime-stories-admin-card">
-						<h3><?php esc_html_e( 'Targeting', 'prime-stories' ); ?></h3>
-						<?php $this->render_select_field( 'show_devices', __( 'Show on devices', 'prime-stories' ), $meta['show_devices'], array( 'all' => __( 'All devices', 'prime-stories' ), 'desktop_only' => __( 'Desktop only', 'prime-stories' ), 'mobile_only' => __( 'Mobile only', 'prime-stories' ) ) ); ?>
-						<?php $this->render_select_field( 'show_users', __( 'Show to users', 'prime-stories' ), $meta['show_users'], array( 'everyone' => __( 'Everyone', 'prime-stories' ), 'guests_only' => __( 'Guests only', 'prime-stories' ), 'logged_in_only' => __( 'Logged-in users only', 'prime-stories' ) ) ); ?>
-						<?php $this->render_text_field( 'custom_css_class', __( 'Custom CSS class', 'prime-stories' ), $meta['custom_css_class'] ); ?>
+						<h3><?php esc_html_e( 'Display', 'prime-stories' ); ?></h3>
+						<?php $this->render_select_field( 'story_status', __( 'Status', 'prime-stories' ), $meta['story_status'], array( 'active' => __( 'Active', 'prime-stories' ), 'inactive' => __( 'Inactive', 'prime-stories' ) ) ); ?>
+						<?php $this->render_number_field( 'priority', __( 'Display order', 'prime-stories' ), (int) $meta['priority'] ); ?>
+						<p class="description"><?php esc_html_e( 'Choose a story group from the sidebar, then publish.', 'prime-stories' ); ?></p>
 					</div>
 				</div>
 			</div>
@@ -530,14 +522,11 @@ class Prime_Stories_Meta_Boxes {
 		<div class="prime-stories-admin-card prime-stories-slides-editor">
 			<div class="prime-stories-admin-card-heading">
 				<div>
-					<h3><?php esc_html_e( 'Story Slides', 'prime-stories' ); ?></h3>
-					<p><?php esc_html_e( 'Build the story frame by frame. Each slide owns its media, caption, CTA, timing, and interaction.', 'prime-stories' ); ?></p>
+					<h3><?php esc_html_e( 'Story content', 'prime-stories' ); ?></h3>
+					<p><?php esc_html_e( 'Add an image or video. The cover is optional.', 'prime-stories' ); ?></p>
 				</div>
 				<div class="prime-stories-slide-tools">
-					<button type="button" class="button" data-story-preset="product"><?php esc_html_e( 'Product preset', 'prime-stories' ); ?></button>
-					<button type="button" class="button" data-story-preset="poll"><?php esc_html_e( 'Poll preset', 'prime-stories' ); ?></button>
-					<button type="button" class="button" data-story-preset="countdown"><?php esc_html_e( 'Countdown preset', 'prime-stories' ); ?></button>
-					<button type="button" class="button button-primary" id="prime-stories-add-slide"><?php esc_html_e( 'Add slide', 'prime-stories' ); ?></button>
+					<button type="button" class="button button-primary" id="prime-stories-add-slide"><?php esc_html_e( '+ Add slide', 'prime-stories' ); ?></button>
 				</div>
 			</div>
 			<div id="prime-stories-slide-rows">
